@@ -55,10 +55,21 @@ export function StatusFilter({ current, query }: { current: string; query: strin
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
       <div className="relative sm:max-w-xs sm:flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <label htmlFor="recherche-prospect" className="sr-only">
+          Rechercher un prospect par entreprise, ville ou email
+        </label>
+        <Search
+          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden
+        />
         <Input
+          id="recherche-prospect"
+          type="search"
+          enterKeyHint="search"
           defaultValue={query}
-          placeholder="Rechercher…"
+          /* La touche Entrée est ce qui déclenche la recherche : autant le
+             dire, il n'y a pas de bouton pour le laisser deviner. */
+          placeholder="Rechercher, puis Entrée"
           className="pl-9"
           onKeyDown={(event) => {
             if (event.key === "Enter") setParam("q", event.currentTarget.value);
@@ -66,10 +77,15 @@ export function StatusFilter({ current, query }: { current: string; query: strin
         />
       </div>
 
-      <div className="flex flex-wrap gap-1">
+      {/* `aria-pressed` plutôt que la seule couleur de fond : sinon le
+          filtre actif ne se distingue qu'à l'œil, et pas du tout au
+          lecteur d'écran. */}
+      <div role="group" aria-label="Filtrer par statut" className="flex flex-wrap gap-1">
         {FILTERS.map((status) => (
           <button
             key={status}
+            type="button"
+            aria-pressed={current === status}
             onClick={() => setParam("statut", status)}
             className={cn(
               "rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",

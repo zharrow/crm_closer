@@ -1,9 +1,10 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:is(.dark, .dark *));
 
 :root {
   --radius: 0.625rem;
+  color-scheme: light;
 
   /* Forêt + terracotta.
      Les neutres portent un voile vert très léger — c'est ce qui donne
@@ -31,16 +32,82 @@
   --success: #2E7D52;
   --warning: #A2762A;
   --border: #DFE5DE;
-  --input: #DFE5DE;
+  /* La bordure d'un champ est la seule chose qui dit « ici on écrit ». À
+     #DFE5DE elle ressortait à 1,28:1 sur la carte — sous les 3:1 que la
+     règle 1.4.11 demande pour la limite d'un composant. Le trait d'un
+     champ n'est donc pas le trait d'une carte : celui-ci sépare, celui-là
+     désigne. Vérifié à 3,32:1 sur la carte et 3,12:1 sur la page. */
+  --input: #878F89;
   --ring: #B3542D;
 
   /* Le canal se reconnaît sans lire le mot. */
   --channel-email: #2F6E8F;
   --channel-phone: #B3542D;
   --channel-linkedin: #5C4E8A;
+
+  /* Les mêmes teintes, assombries pour être *lues* sur leur propre fond
+     pâle. Un badge, c'est du 12px sur un aplat à 15 % : la couleur qui
+     porte bien en pastille d'icône tombe à 3,2:1 en texte, sous le seuil
+     AA. Deux jetons plutôt qu'un, donc : l'un pour la teinte, l'autre
+     pour ce qui doit rester lisible. Vérifié sur les deux fonds que
+     porte un badge, la carte et la page : 4,8:1 au pire. */
+  --success-on-tint: #256845;
+  --warning-on-tint: #7A5718;
+  --channel-email-on-tint: #2C6684;
+  --channel-phone-on-tint: #9C4722;
+  --channel-linkedin-on-tint: #5C4E8A;
+}
+
+/* Le thème sombre était écrit depuis le début mais ne s'allumait jamais :
+   rien ne posait la classe `.dark`, et aucun sélecteur ne regardait le
+   réglage du système. Il suit maintenant les préférences de l'OS.
+   `class="light"` sur <html> le force en clair, `class="dark"` en sombre —
+   les valeurs sont écrites deux fois parce qu'une media query ne se
+   regroupe pas avec un sélecteur de classe. */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    color-scheme: dark;
+
+    --background: #0E1512;
+    --foreground: #E4EAE3;
+    --card: #16201B;
+    --card-foreground: #E4EAE3;
+    --popover: #16201B;
+    --popover-foreground: #E4EAE3;
+    --primary: #DB8355;
+    --primary-foreground: #1B0E07;
+    --secondary: #1B2620;
+    --secondary-foreground: #E4EAE3;
+    --muted: #1B2620;
+    --muted-foreground: #92A08E;
+    --accent: #1F2C25;
+    --accent-foreground: #E4EAE3;
+    --destructive: #E0685A;
+    --destructive-foreground: #1B0E07;
+    --success: #58B27C;
+    --warning: #D3A455;
+    --border: #24312A;
+    /* 3,47:1 sur la carte, 3,84:1 sur la page. */
+    --input: #69756C;
+    --ring: #DB8355;
+
+    --channel-email: #67A8C7;
+    --channel-phone: #DB8355;
+    --channel-linkedin: #9A8AC9;
+
+    /* Sur fond sombre l'aplat descend au lieu de monter : la teinte
+       claire y passe déjà AA sans être retouchée. */
+    --success-on-tint: #58B27C;
+    --warning-on-tint: #D3A455;
+    --channel-email-on-tint: #67A8C7;
+    --channel-phone-on-tint: #DB8355;
+    --channel-linkedin-on-tint: #9A8AC9;
+  }
 }
 
 .dark {
+  color-scheme: dark;
+
   --background: #0E1512;
   --foreground: #E4EAE3;
   --card: #16201B;
@@ -60,16 +127,53 @@
   --success: #58B27C;
   --warning: #D3A455;
   --border: #24312A;
-  --input: #2A382F;
+  --input: #69756C;
   --ring: #DB8355;
 
   --channel-email: #67A8C7;
   --channel-phone: #DB8355;
   --channel-linkedin: #9A8AC9;
+
+  --success-on-tint: #58B27C;
+  --warning-on-tint: #D3A455;
+  --channel-email-on-tint: #67A8C7;
+  --channel-phone-on-tint: #DB8355;
+  --channel-linkedin-on-tint: #9A8AC9;
 }
 
 
 @theme inline {
+  /* Les caractères étaient le seul axe non décidé : sans famille déclarée,
+     l'app s'affichait dans ce que le système voulait bien fournir — donc
+     pas la même chose sur un Mac, un PC et un Android. Inter Tight tient
+     le texte dense en 13-15 px et porte de vrais chiffres tabulaires, ce
+     dont vivent les colonnes de score et le tableau de rendement.
+     `--font-inter-tight` et `--font-jetbrains-mono` sont posées sur <html>
+     par `next/font` ; la pile de secours sert le temps du chargement, et
+     si la police ne se charge jamais. */
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
+
+  /* L'échelle, en un seul endroit.
+     Elle n'existait pas : 90 des 111 tailles écrites dans l'app étaient
+     `text-sm` ou `text-xs`, c'est-à-dire 14 et 12 px, et rien n'était à
+     16 px. Un texte qu'on lit en continu — une description de confirmation
+     avant une action irréversible, un brouillon qu'on relit avant de
+     l'envoyer — ne se lit pas confortablement à 14 px.
+     Le namespace `--text-*` de Tailwind v4 fabrique les utilitaires
+     correspondants : `text-meta`, `text-dense`, `text-body`, `text-title`.
+     Les tailles par défaut (`text-sm`, `text-xs`) restent disponibles. */
+  --text-meta: 0.8125rem;   /* 13px — méta, badges, en-têtes de colonne */
+  /* `text-xs` est écrit 41 fois dans l'app, héritage d'avant l'échelle. Le
+     remonter au plancher plutôt que de réécrire 41 endroits : plus rien ne
+     descend alors sous la plus petite taille qu'on s'autorise. Le nom ment
+     un peu — `text-xs` ne vaut plus 12 px — mais un nom trompeur pèse moins
+     qu'une ligne de 12 px devant quelqu'un qui voit mal. */
+  --text-xs: 0.8125rem;
+  --text-dense: 0.9375rem;  /* 15px — tableaux, contenus de carte       */
+  --text-body: 1rem;        /* 16px — prose, aides, brouillons          */
+  --text-title: 1.0625rem;  /* 17px — titres de carte                   */
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -91,6 +195,11 @@
   --color-channel-email: var(--channel-email);
   --color-channel-phone: var(--channel-phone);
   --color-channel-linkedin: var(--channel-linkedin);
+  --color-success-on-tint: var(--success-on-tint);
+  --color-warning-on-tint: var(--warning-on-tint);
+  --color-channel-email-on-tint: var(--channel-email-on-tint);
+  --color-channel-phone-on-tint: var(--channel-phone-on-tint);
+  --color-channel-linkedin-on-tint: var(--channel-linkedin-on-tint);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -102,6 +211,22 @@
 }
 
 @layer base {
+  /* Le confort de lecture, en une valeur.
+     Toute l'app est en `rem` : monter la racine agrandit le texte, mais
+     aussi la hauteur des boutons, celle des champs, les marges et les
+     cibles à viser. C'est ce qu'il faut pour une vue qui baisse — un texte
+     plus gros dans une interface restée petite ne sert qu'à moitié.
+     En pourcentage et non en pixels : si quelqu'un a déjà agrandi la police
+     dans son navigateur, cette valeur s'y ajoute au lieu de l'écraser. Un
+     `font-size` en dur sur `html` annulerait ce réglage, ce qui est
+     précisément ce qu'il ne faut pas faire à un lecteur qui en a besoin.
+     Les points de rupture ne bougent pas : dans une media query, `rem` se
+     mesure toujours sur la taille initiale du navigateur, jamais sur
+     celle posée ici. */
+  html {
+    font-size: 112.5%;
+  }
+
   * {
     border-color: var(--border);
     outline-color: color-mix(in oklch, var(--ring) 50%, transparent);
@@ -110,6 +235,70 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+
+  code, kbd, pre, samp {
+    font-family: var(--font-mono);
+  }
+
+  /* Les nombres qui changent ne doivent pas déplacer ce qui les suit :
+     un score qui passe de 9 à 10 ne doit pas décaler sa colonne. */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Tailwind v4 a retiré le `cursor: pointer` des boutons de son
+     preflight : sans cette règle, tout ce qui n'est pas un lien répond
+     à la souris avec une flèche, y compris les boutons d'action. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  /* Le repère de focus, une seule fois pour toute l'app — boutons,
+     champs, liens, `summary`, zone de dépôt. Un `outline` plutôt qu'un
+     `ring` : il suit le rayon des coins et laisse voir la surface derrière
+     son décalage, là où un `ring-offset` doit deviner la couleur du fond
+     et se trompe dès qu'un bouton est posé sur une carte. Ne remettez pas
+     `outline-none` dans un composant sans le remplacer par autre chose. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Les modales s'ouvraient d'un coup, sans rien pour relier la boîte au
+   bouton qui l'a demandée. La sortie est plus courte que l'entrée : ce
+   qui s'en va n'a pas à se faire attendre. */
+@keyframes scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scrim-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes sheet-out {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

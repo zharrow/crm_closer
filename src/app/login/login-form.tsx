@@ -41,7 +41,10 @@ export function LoginForm({ next }: { next: string }) {
       </div>
 
       {state.error && (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+        >
           {state.error}
         </p>
       )}

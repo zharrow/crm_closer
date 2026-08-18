@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   Check,
+  ChevronDown,
   Clock,
   Copy,
   ExternalLink,
@@ -17,10 +18,11 @@ import {
 } from "lucide-react";
 import { ActionButton } from "@/components/action-button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { channelTone, relativeDay, scoreTone } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import { channelTone, cn, relativeDay, scoreTone } from "@/lib/utils";
 import { draftTaskNow, markTaskDone, saveTaskDraft, skipTask, snoozeTask } from "./actions";
 
 export interface TaskCardData {
@@ -50,7 +52,27 @@ const CHANNEL_META: Record<string, { label: string; icon: typeof Mail }> = {
   contact_form: { label: "Formulaire", icon: ExternalLink },
 };
 
-export function TaskCard({ task }: { task: TaskCardData }) {
+/**
+ * Une action de la file.
+ *
+ * La carte reste **montée** quand elle est repliée : seul son contenu
+ * disparaît. C'est ce qui permet de replier une action dont le brouillon a
+ * été retouché sans perdre les corrections — démonter le composant
+ * emporterait `subject` et `body` avec lui. Le repli est donc un geste
+ * d'affichage, jamais une perte.
+ */
+export function TaskCard({
+  task,
+  late,
+  expanded,
+  onToggle,
+}: {
+  task: TaskCardData;
+  /** Échéance antérieure à ce matin. Décidé côté serveur, avec le groupe. */
+  late: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const [subject, setSubject] = useState(task.subject ?? "");
   const [body, setBody] = useState(task.body ?? "");
   const [pending, startTransition] = useTransition();
@@ -89,7 +111,58 @@ export function TaskCard({ task }: { task: TaskCardData }) {
       toast.success("Marqué envoyé — la relance suivante est programmée");
     });
 
-  const overdue = new Date(task.dueAt).getTime() < Date.now() - 86_400_000;
+  const panelId = `action-${task.id}`;
+
+  // Repliée : une ligne, et un bouton pour toute surface. Le nom de
+  // l'entreprise y est du texte et non un lien — un lien dans un bouton
+  // n'est pas du HTML valide, et le lien vers la fiche reste disponible
+  // dès que la carte est ouverte.
+  if (!expanded) {
+    return (
+      <Card>
+        {/* `aria-controls` n'est pas posé ici : le panneau qu'il désignerait
+            n'existe pas tant que la carte est repliée, et pointer vers un
+            identifiant absent est pire que de ne rien pointer. `aria-expanded`
+            suffit à annoncer l'état, c'est le motif habituel d'un accordéon.
+            Les pastilles sont des `span` et non des `Badge` : ce dernier rend
+            un `div`, et un `div` dans un `button` n'est pas du HTML valide. */}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={false}
+          className="flex w-full flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-left transition-colors hover:bg-accent/40"
+        >
+          <span className={cn(badgeVariants({ variant: channelTone(task.channel) }), "gap-1")}>
+            <Icon className="h-3 w-3" />
+            <span className="sr-only sm:not-sr-only">{meta.label}</span>
+          </span>
+          <span className="font-semibold">{task.companyName}</span>
+          {task.score !== null && (
+            <span className={cn(badgeVariants({ variant: scoreTone(task.score) }))}>
+              {task.score}
+            </span>
+          )}
+          {/* Un brouillon retouché puis replié doit se signaler, sinon la
+              correction est invisible et on la refait. */}
+          {dirty && (
+            <span className={cn(badgeVariants({ variant: "warning" }))}>
+              Modifié, non enregistré
+            </span>
+          )}
+          <span
+            className={
+              late
+                ? "ml-auto text-meta text-destructive"
+                : "ml-auto text-meta text-muted-foreground"
+            }
+          >
+            {relativeDay(task.dueAt)}
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        </button>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -111,9 +184,19 @@ export function TaskCard({ task }: { task: TaskCardData }) {
           {task.score !== null && (
             <Badge variant={scoreTone(task.score)}>{task.score}</Badge>
           )}
-          <span className={overdue ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+          <span className={late ? "text-meta text-destructive" : "text-meta text-muted-foreground"}>
             {relativeDay(task.dueAt)}
           </span>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded
+            aria-controls={panelId}
+            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
+          >
+            <ChevronDown className="h-4 w-4 rotate-180" aria-hidden />
+            <span className="sr-only">Replier l&apos;action pour {task.companyName}</span>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -147,7 +230,7 @@ export function TaskCard({ task }: { task: TaskCardData }) {
         )}
       </CardHeader>
 
-      <CardContent className="flex flex-col gap-4">
+      <CardContent id={panelId} className="flex flex-col gap-4">
         {task.error && (
           <p className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs leading-relaxed">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
@@ -178,21 +261,33 @@ export function TaskCard({ task }: { task: TaskCardData }) {
           </div>
         ) : (
           <>
+            {/* Le libellé était le seul `placeholder` : il disparaissait dès
+                que le champ contenait quelque chose, c'est-à-dire toujours,
+                puisque le modèle le remplit. On ne voyait donc plus qu'une
+                ligne de texte en gras, sans savoir que c'était l'objet. */}
             {task.channel === "email" && (
-              <Input
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-                placeholder="Objet"
-                className="font-medium"
-              />
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`objet-${task.id}`}>Objet</Label>
+                <Input
+                  id={`objet-${task.id}`}
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                  placeholder="L'objet de l'email"
+                  className="font-medium"
+                />
+              </div>
             )}
 
-            <Textarea
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              rows={task.channel === "linkedin" ? 6 : 14}
-              className="resize-y font-[inherit]"
-            />
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`corps-${task.id}`}>Message</Label>
+              <Textarea
+                id={`corps-${task.id}`}
+                value={body}
+                onChange={(event) => setBody(event.target.value)}
+                rows={task.channel === "linkedin" ? 6 : 14}
+                className="resize-y font-[inherit]"
+              />
+            </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <ActionButton
@@ -269,6 +364,7 @@ export function TaskCard({ task }: { task: TaskCardData }) {
                   disabled={pending}
                   variant="ghost"
                   size="sm"
+                  aria-label="Passer cette étape"
                   tooltip="Passe cette étape sans l'envoyer et programme directement la suivante."
                   confirm={{
                     title: "Passer cette étape ?",
@@ -278,7 +374,7 @@ export function TaskCard({ task }: { task: TaskCardData }) {
                     destructive: true,
                   }}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-4 w-4" aria-hidden />
                 </ActionButton>
               </div>
             </div>

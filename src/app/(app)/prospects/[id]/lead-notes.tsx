@@ -19,6 +19,7 @@ export function LeadNotes({ leadId, notes }: { leadId: string; notes: string }) 
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <Textarea
+          aria-label="Notes sur ce prospect"
           value={value}
           onChange={(event) => setValue(event.target.value)}
           rows={6}

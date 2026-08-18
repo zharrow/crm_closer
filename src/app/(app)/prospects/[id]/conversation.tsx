@@ -96,8 +96,11 @@ export function Conversation({
         )}
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Le prospect a répondu</label>
+          <label htmlFor="reponse-prospect" className="text-sm font-medium">
+            Le prospect a répondu
+          </label>
           <Textarea
+            id="reponse-prospect"
             value={incoming}
             onChange={(event) => setIncoming(event.target.value)}
             rows={4}
@@ -156,6 +159,7 @@ export function Conversation({
             )}
 
             <Textarea
+              aria-label="Réponse proposée, modifiable"
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
               rows={8}

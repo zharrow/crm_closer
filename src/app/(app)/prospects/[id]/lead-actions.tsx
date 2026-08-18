@@ -67,9 +67,10 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
         <div className="flex items-center gap-2">
           <Input
             type="datetime-local"
+            aria-label="Date et heure du rendez-vous"
             value={bookingDate}
             onChange={(event) => setBookingDate(event.target.value)}
-            className="h-8 w-52"
+            className="h-9 w-52"
           />
           <ActionButton
             size="sm"

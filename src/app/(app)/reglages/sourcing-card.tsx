@@ -33,6 +33,14 @@ const STEP_TITLES: Record<CycleStep, string> = {
   enroll: "Inscription en séquence",
 };
 
+/** L'état de l'étape en mots : l'icône seule ne s'annonce pas. */
+const STEP_STATUS_LABEL: Record<StepState["status"], string> = {
+  pending: "en attente",
+  running: "en cours",
+  done: "terminé",
+  error: "erreur",
+};
+
 interface StepState {
   status: "pending" | "running" | "done" | "error";
   /** Ce que l'étape va faire, annoncé avant de la faire. */
@@ -285,8 +293,14 @@ export function SourcingCard({
             Activer le sourcing automatique quotidien
           </label>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>Requêtes</Label>
+          <div
+            role="group"
+            aria-labelledby="requetes-titre"
+            className="flex flex-col gap-1.5"
+          >
+            <span id="requetes-titre" className="text-sm font-medium leading-none">
+              Requêtes
+            </span>
             <input type="hidden" name="placesQueries" value={queries.join("\n")} />
 
             {queries.length > 0 && (
@@ -315,10 +329,11 @@ export function SourcingCard({
                         variant="ghost"
                         size="sm"
                         className="h-5 w-5 rounded-full p-0 [&_svg]:size-3"
+                        aria-label={`Retirer la requête ${query}`}
                         tooltip={`Retirer « ${query} ». Les leads déjà sourcés par cette requête sont conservés.`}
                         onClick={() => setQueries((prev) => prev.filter((q) => q !== query))}
                       >
-                        <X />
+                        <X aria-hidden />
                       </ActionButton>
                     </li>
                   );
@@ -328,6 +343,7 @@ export function SourcingCard({
 
             <div className="flex items-center gap-2">
               <Input
+                aria-label="Nouvelle requête de sourcing"
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
                 onKeyDown={(event) => {
@@ -369,7 +385,7 @@ export function SourcingCard({
         {yields.length > 0 && (
           <div className="flex flex-col gap-3 border-t pt-5">
             <div>
-              <Label>Rendement par requête</Label>
+              <span className="text-sm font-medium leading-none">Rendement par requête</span>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 La vie d&apos;un lead, étape par étape. C&apos;est entre deux colonnes que ça
                 meurt, pas dans le total.
@@ -382,12 +398,12 @@ export function SourcingCard({
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-background">
                   <tr className="border-b text-xs text-muted-foreground">
-                    <th className="px-3 py-2 text-left font-medium">Requête</th>
-                    <th className="px-3 py-2 text-right font-medium">Sourcés</th>
-                    <th className="px-3 py-2 text-right font-medium">Joignables</th>
-                    <th className="px-3 py-2 text-right font-medium">≥ seuil</th>
-                    <th className="px-3 py-2 text-right font-medium">Inscrits</th>
-                    <th className="px-3 py-2 text-right font-medium">Score moyen</th>
+                    <th scope="col" className="px-3 py-2 text-left font-medium">Requête</th>
+                    <th scope="col" className="px-3 py-2 text-right font-medium">Sourcés</th>
+                    <th scope="col" className="px-3 py-2 text-right font-medium">Joignables</th>
+                    <th scope="col" className="px-3 py-2 text-right font-medium">≥ seuil</th>
+                    <th scope="col" className="px-3 py-2 text-right font-medium">Inscrits</th>
+                    <th scope="col" className="px-3 py-2 text-right font-medium">Score moyen</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -436,7 +452,7 @@ export function SourcingCard({
                   max={100}
                   value={threshold}
                   onChange={(event) => setThreshold(Number(event.target.value))}
-                  className="h-8 w-20"
+                  className="h-9 w-20"
                 />
               </div>
 
@@ -454,6 +470,7 @@ export function SourcingCard({
                         <li key={option.threshold}>
                           <button
                             type="button"
+                            aria-pressed={active}
                             onClick={() => setThreshold(option.threshold)}
                             className={
                               active
@@ -542,10 +559,11 @@ export function SourcingCard({
                       variant="ghost"
                       size="sm"
                       disabled={busy}
+                      aria-label={`Écarter la requête ${suggestion.query}`}
                       onClick={() => dismiss(suggestion)}
                       tooltip="Écarte cette requête. Le modèle ne la reproposera plus."
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-4 w-4" aria-hidden />
                     </ActionButton>
                   </div>
                 </li>
@@ -577,10 +595,11 @@ export function SourcingCard({
                         variant="ghost"
                         size="sm"
                         disabled={busy}
+                        aria-label={`Remettre la requête ${suggestion.query} dans les propositions`}
                         onClick={() => restore(suggestion)}
                         tooltip="Remet cette requête dans les propositions."
                       >
-                        <RotateCcw className="h-4 w-4" />
+                        <RotateCcw className="h-4 w-4" aria-hidden />
                       </ActionButton>
                     </li>
                   ))}
@@ -638,14 +657,15 @@ export function SourcingCard({
                   <li key={key} className="flex items-start gap-3">
                     <span className="mt-0.5 shrink-0">
                       {step.status === "running" ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
                       ) : step.status === "done" ? (
-                        <Check className="h-4 w-4 text-success" />
+                        <Check className="h-4 w-4 text-success" aria-hidden />
                       ) : step.status === "error" ? (
-                        <AlertTriangle className="h-4 w-4 text-destructive" />
+                        <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden />
                       ) : (
-                        <Circle className="h-4 w-4 text-muted-foreground/40" />
+                        <Circle className="h-4 w-4 text-muted-foreground/40" aria-hidden />
                       )}
+                      <span className="sr-only">{STEP_STATUS_LABEL[step.status]}</span>
                     </span>
 
                     <div className="min-w-0 flex-1">
@@ -671,7 +691,14 @@ export function SourcingCard({
                       )}
 
                       {ratio !== null && step.status === "running" && (
-                        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          role="progressbar"
+                          aria-valuemin={0}
+                          aria-valuemax={step.total ?? undefined}
+                          aria-valuenow={step.done ?? undefined}
+                          aria-label={`${STEP_TITLES[key]} : ${step.done} sur ${step.total}`}
+                          className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted"
+                        >
                           <div
                             className="h-full bg-primary transition-all duration-300"
                             style={{ width: `${Math.round(ratio * 100)}%` }}

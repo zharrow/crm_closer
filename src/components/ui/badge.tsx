@@ -10,13 +10,15 @@ const badgeVariants = cva(
         default: "border-transparent bg-primary text-primary-foreground",
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         destructive: "border-transparent bg-destructive text-destructive-foreground",
-        success: "border-transparent bg-success/15 text-success",
-        warning: "border-transparent bg-warning/20 text-warning",
+        /* Aplat pâle + texte assombri : la teinte pure ne passe pas AA en
+           12px sur son propre fond, d'où les jetons `-on-tint`. */
+        success: "border-transparent bg-success/15 text-success-on-tint",
+        warning: "border-transparent bg-warning/20 text-warning-on-tint",
         outline: "text-foreground",
         /* Le canal doit se reconnaître sans lire le mot. */
-        email: "border-transparent bg-channel-email/12 text-channel-email",
-        phone: "border-transparent bg-channel-phone/15 text-channel-phone",
-        linkedin: "border-transparent bg-channel-linkedin/12 text-channel-linkedin",
+        email: "border-transparent bg-channel-email/12 text-channel-email-on-tint",
+        phone: "border-transparent bg-channel-phone/15 text-channel-phone-on-tint",
+        linkedin: "border-transparent bg-channel-linkedin/12 text-channel-linkedin-on-tint",
       },
     },
     defaultVariants: { variant: "default" },

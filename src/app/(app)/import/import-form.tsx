@@ -109,9 +109,21 @@ export function ImportForm() {
         }}
       />
 
+      {/* La zone de dépôt est aussi un bouton : elle n'était atteignable
+          qu'à la souris, et l'`input` qu'elle déclenche est masqué — au
+          clavier, l'import était donc impossible. */}
       <Card
+        role="button"
+        tabIndex={0}
+        aria-label="Choisir un fichier CSV à importer, ou le déposer ici"
         className="cursor-pointer border-dashed transition-colors hover:border-foreground/30"
         onClick={() => inputRef.current?.click()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
         onDragOver={(event) => event.preventDefault()}
         onDrop={(event) => {
           event.preventDefault();
@@ -120,7 +132,7 @@ export function ImportForm() {
         }}
       >
         <CardContent className="flex flex-col items-center gap-2 py-12 text-center">
-          <FileUp className="h-8 w-8 text-muted-foreground" />
+          <FileUp className="h-8 w-8 text-muted-foreground" aria-hidden />
           <p className="text-sm font-medium">
             {fileName ?? "Dépose un fichier CSV, ou clique pour le choisir"}
           </p>
@@ -134,10 +146,12 @@ export function ImportForm() {
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2.5 font-medium">Entreprise</th>
-                  <th className="px-4 py-2.5 font-medium">Contact</th>
-                  <th className="px-4 py-2.5 font-medium">Email</th>
-                  <th className="hidden px-4 py-2.5 font-medium sm:table-cell">Site</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">Entreprise</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">Contact</th>
+                  <th scope="col" className="px-4 py-2.5 font-medium">Email</th>
+                  <th scope="col" className="hidden px-4 py-2.5 font-medium sm:table-cell">
+                    Site
+                  </th>
                 </tr>
               </thead>
               <tbody>

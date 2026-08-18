@@ -6,7 +6,9 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"tex
     <textarea
       ref={ref}
       className={cn(
-        "flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm leading-relaxed shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+        /* 15 px et non 14 : ce champ contient le message qu'on relit avant
+           de l'envoyer, c'est-à-dire le texte le plus important de l'app. */
+        "flex min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-dense leading-relaxed shadow-sm transition-colors placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}

@@ -4,7 +4,8 @@ import { and, desc, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, leads } from "@/db/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate, scoreTone } from "@/lib/utils";
+import { ScoreBadge } from "@/components/score-badge";
+import { formatDate } from "@/lib/utils";
 import { NewLeadDialog } from "./new-lead-dialog";
 import { StatusFilter, STATUS_LABEL, STATUS_VARIANT } from "./filters";
 
@@ -47,6 +48,12 @@ export default async function ProspectsPage({
     .orderBy(desc(leads.score), desc(leads.createdAt))
     .limit(200);
 
+  // « Aucun résultat » et « aucun prospect » ne sont pas le même écran, et
+  // ne demandent pas le même geste : l'un veut qu'on élargisse la recherche,
+  // l'autre qu'on importe. Les confondre, c'est conseiller un import à
+  // quelqu'un qui a deux cents leads et une faute de frappe.
+  const filtered = Boolean((statut && statut !== "tous") || q?.trim());
+
   return (
     <div className="flex flex-col gap-6">
       <ScrollMemory />
@@ -65,8 +72,36 @@ export default async function ProspectsPage({
 
       {rows.length === 0 ? (
         <Card>
-          <CardContent className="py-14 text-center text-sm text-muted-foreground">
-            Aucun prospect. Importe un CSV ou ajoute-en un à la main.
+          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+            {filtered ? (
+              <>
+                <p className="max-w-md leading-relaxed text-muted-foreground">
+                  Aucun prospect ne correspond
+                  {q?.trim() ? <> à <span className="font-medium text-foreground">« {q.trim()} »</span></> : null}
+                  {statut && statut !== "tous" ? (
+                    <> avec le statut «&nbsp;{STATUS_LABEL[statut] ?? statut}&nbsp;»</>
+                  ) : null}
+                  .
+                </p>
+                <Link href="/prospects" className="font-medium underline underline-offset-4">
+                  Effacer les filtres
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="max-w-md leading-relaxed text-muted-foreground">
+                  Aucun prospect pour l&apos;instant.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-4">
+                  <Link href="/import" className="font-medium underline underline-offset-4">
+                    Importer un CSV
+                  </Link>
+                  <span className="text-muted-foreground">
+                    ou ajoute-en un à la main avec «&nbsp;Ajouter&nbsp;».
+                  </span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -74,11 +109,11 @@ export default async function ProspectsPage({
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-4 py-3 font-medium">Entreprise</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Ville</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-                <th className="px-4 py-3 text-right font-medium">Score</th>
-                <th className="hidden px-4 py-3 text-right font-medium md:table-cell">
+                <th scope="col" className="px-4 py-3 font-medium">Entreprise</th>
+                <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">Ville</th>
+                <th scope="col" className="px-4 py-3 font-medium">Statut</th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">Score</th>
+                <th scope="col" className="hidden px-4 py-3 text-right font-medium md:table-cell">
                   Mise à jour
                 </th>
               </tr>
@@ -109,7 +144,7 @@ export default async function ProspectsPage({
                     {lead.score === null ? (
                       "—"
                     ) : (
-                      <Badge variant={scoreTone(lead.score)}>{lead.score}</Badge>
+                      <ScoreBadge score={lead.score} rationale={lead.scoreRationale} />
                     )}
                   </td>
                   <td className="hidden px-4 py-3 text-right text-muted-foreground md:table-cell">

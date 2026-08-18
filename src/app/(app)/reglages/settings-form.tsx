@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { cloneElement, useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ActionButton } from "@/components/action-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,17 @@ import type { QueryYield, ThresholdOption } from "@/lib/query-suggestions";
 import { saveSettings } from "./actions";
 import { SourcingCard } from "./sourcing-card";
 
+/**
+ * Un champ : libellé, contrôle, explication.
+ *
+ * Le libellé était posé à côté du contrôle sans rien qui les relie —
+ * visuellement ça se lit, mais cliquer dessus ne donnait pas le focus, et
+ * un lecteur d'écran annonçait un champ sans nom. L'identifiant est donc
+ * fabriqué ici et injecté dans l'enfant, plutôt que d'être écrit à la main
+ * vingt fois. L'explication devient un `aria-describedby` : elle est lue
+ * *après* le nom du champ, au lieu de s'y fondre comme le ferait un
+ * libellé enveloppant.
+ */
 function Field({
   label,
   hint,
@@ -19,13 +30,20 @@ function Field({
 }: {
   label: string;
   hint?: string;
-  children: React.ReactNode;
+  children: React.ReactElement<{ id?: string; "aria-describedby"?: string }>;
 }) {
+  const id = useId();
+  const hintId = hint ? `${id}-aide` : undefined;
+
   return (
     <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      {children}
-      {hint && <p className="text-xs leading-relaxed text-muted-foreground">{hint}</p>}
+      <Label htmlFor={id}>{label}</Label>
+      {cloneElement(children, { id, "aria-describedby": hintId })}
+      {hint && (
+        <p id={hintId} className="text-meta leading-relaxed text-muted-foreground">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -154,7 +172,7 @@ export function SettingsForm({
             <select
               name="draftModel"
               defaultValue={settings.draftModel}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
             >
               <option value="claude-opus-5">Claude Opus 5 — le plus fin</option>
               <option value="claude-sonnet-5">Claude Sonnet 5 — équilibré</option>
@@ -166,7 +184,7 @@ export function SettingsForm({
             <select
               name="draftEffort"
               defaultValue={settings.draftEffort}
-              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-sm"
             >
               <option value="low">Bas — rapide et suffisant</option>
               <option value="medium">Moyen</option>
