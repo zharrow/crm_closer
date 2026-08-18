@@ -21,8 +21,31 @@ const TASK_STATUS_LABEL: Record<string, string> = {
   failed: "Échec",
 };
 
-export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
+/**
+ * D'où l'on vient, et donc où « retour » ramène.
+ *
+ * Le lien était écrit en dur vers la liste des prospects : en arrivant
+ * depuis la file du jour, il renvoyait ailleurs que d'où l'on venait, et on
+ * perdait sa place dans la file. Un fil d'Ariane qui se trompe de parent est
+ * pire que pas de fil du tout — on lui fait confiance.
+ */
+const ORIGINS = {
+  file: { href: "/", label: "À faire" },
+  liste: { href: "/prospects", label: "Prospects" },
+} as const;
+
+export default async function LeadPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ depuis?: string }>;
+}) {
   const { id } = await params;
+  const { depuis } = await searchParams;
+
+  // Valeur inconnue ou absente : la liste, qui reste le parent naturel.
+  const origin = depuis === "file" ? ORIGINS.file : ORIGINS.liste;
 
   const [lead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   if (!lead) notFound();
@@ -49,10 +72,10 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
     <div className="flex flex-col gap-8">
       <div>
         <Link
-          href="/prospects"
+          href={origin.href}
           className="text-sm text-muted-foreground hover:underline underline-offset-4"
         >
-          ← Prospects
+          ← {origin.label}
         </Link>
 
         <div className="mt-3 flex flex-wrap items-center gap-3">

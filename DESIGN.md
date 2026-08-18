@@ -179,6 +179,30 @@ marqué.
 
 ---
 
+## Retour et repères
+
+Un lien de retour dit d'où l'on vient, jamais où l'on suppose que l'on est.
+Écrit en dur, il se trompe dès qu'il existe deux chemins vers le même écran —
+et un fil d'Ariane qui se trompe de parent est pire que pas de fil du tout,
+parce qu'on lui fait confiance.
+
+La fiche prospect s'atteint depuis la file du jour et depuis la liste. La
+provenance voyage donc dans l'URL (`?depuis=file`), et non dans l'historique
+du navigateur : le retour reste juste après un rechargement, ou si le lien est
+rouvert depuis un onglet resté ouvert. Valeur inconnue ou absente : la liste,
+qui est le parent naturel.
+
+**Revenir, c'est retrouver sa place**, pas seulement la page. Deux mémoires
+s'en chargent, toutes deux en `sessionStorage` et restaurées après le premier
+rendu — jamais dans l'état initial, qui doit rester identique côté serveur et
+côté client :
+
+- `ScrollMemory` rend la position de défilement, par chemin et par filtre ;
+- la file rend l'action qui était ouverte — et ne la rouvre que si elle est
+  encore là, une action envoyée entre-temps n'ayant plus à l'être.
+
+---
+
 ## Accessibilité
 
 Acquis, à ne pas défaire :

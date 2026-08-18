@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TaskCard, type TaskCardData } from "./task-card";
+
+/** Même mécanisme que `ScrollMemory` : la place qu'on avait, rendue au retour. */
+const STORAGE_KEY = "file:action-ouverte";
 
 /**
  * La file du jour, une action ouverte à la fois.
@@ -30,7 +33,37 @@ export function TaskQueue({
     late[0]?.id ?? today[0]?.id ?? null,
   );
 
-  const toggle = (id: string) => setOpenId((current) => (current === id ? null : id));
+  /**
+   * On restaure après le premier rendu, pas pendant.
+   *
+   * `sessionStorage` n'existe pas sur le serveur : le lire dans l'état
+   * initial ferait diverger le rendu serveur du rendu client, et React
+   * signalerait l'écart. Le prix est un rendu de plus, invisible.
+   *
+   * Sans ça, ouvrir la troisième action, aller voir la fiche du prospect et
+   * revenir rouvrait la première — alors que la position de défilement, elle,
+   * était bien rendue. On atterrissait donc au bon endroit devant la mauvaise
+   * carte.
+   */
+  useEffect(() => {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    // L'action a pu être envoyée ou reportée entre-temps : on ne rouvre que
+    // ce qui est encore dans la file.
+    const stillHere = [...late, ...today].some((task) => task.id === saved);
+    if (stillHere) setOpenId(saved);
+    else sessionStorage.removeItem(STORAGE_KEY);
+    // Au montage seulement : ensuite c'est `toggle` qui fait autorité.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggle = (id: string) =>
+    setOpenId((current) => {
+      const next = current === id ? null : id;
+      if (next) sessionStorage.setItem(STORAGE_KEY, next);
+      else sessionStorage.removeItem(STORAGE_KEY);
+      return next;
+    });
 
   return (
     <div className="flex flex-col gap-3">

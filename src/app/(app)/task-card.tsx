@@ -175,8 +175,13 @@ export function TaskCard({
           {task.stepPosition && (
             <Badge variant="outline">Étape {task.stepPosition}</Badge>
           )}
+          {/* `depuis=file` sert au lien de retour de la fiche : sans lui, il
+              renvoyait toujours vers la liste des prospects, y compris quand
+              on arrivait d'ici. Un marqueur dans l'URL plutôt que l'historique
+              du navigateur — comme ça le retour reste juste après un
+              rechargement, ou si le lien est rouvert depuis un onglet. */}
           <Link
-            href={`/prospects/${task.leadId}`}
+            href={`/prospects/${task.leadId}?depuis=file`}
             className="font-semibold hover:underline underline-offset-4"
           >
             {task.companyName}
