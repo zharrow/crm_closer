@@ -55,3 +55,25 @@ export function normalizeUrl(value: string | undefined | null): string | null {
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
 }
+
+/**
+ * La couleur d'un score et d'un canal, décidées à un seul endroit.
+ *
+ * Un score n'est pas une note sur 100 qu'on lit : c'est un feu tricolore.
+ * En dessous du seuil d'inscription il n'appelle aucune action, autour du
+ * seuil il se discute, au-dessus il part en séquence. Trois teintes, pas
+ * un dégradé — un dégradé ne se lit pas d'un coup d'œil.
+ */
+export function scoreTone(score: number | null): "success" | "warning" | "secondary" {
+  if (score === null) return "secondary";
+  if (score >= 60) return "success";
+  if (score >= 25) return "warning";
+  return "secondary";
+}
+
+export function channelTone(channel: string): "email" | "phone" | "linkedin" | "secondary" {
+  if (channel === "email") return "email";
+  if (channel === "phone") return "phone";
+  if (channel === "linkedin") return "linkedin";
+  return "secondary";
+}

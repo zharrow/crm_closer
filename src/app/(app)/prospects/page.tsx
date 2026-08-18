@@ -3,7 +3,7 @@ import { and, desc, ilike, or, sql, type SQL } from "drizzle-orm";
 import { db, leads } from "@/db/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate } from "@/lib/utils";
+import { formatDate, scoreTone } from "@/lib/utils";
 import { NewLeadDialog } from "./new-lead-dialog";
 import { StatusFilter, STATUS_LABEL, STATUS_VARIANT } from "./filters";
 
@@ -103,7 +103,13 @@ export default async function ProspectsPage({
                       {STATUS_LABEL[lead.status] ?? lead.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">{lead.score ?? "—"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {lead.score === null ? (
+                      "—"
+                    ) : (
+                      <Badge variant={scoreTone(lead.score)}>{lead.score}</Badge>
+                    )}
+                  </td>
                   <td className="hidden px-4 py-3 text-right text-muted-foreground md:table-cell">
                     {formatDate(lead.updatedAt)}
                   </td>

@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { relativeDay } from "@/lib/utils";
+import { channelTone, relativeDay, scoreTone } from "@/lib/utils";
 import { draftTaskNow, markTaskDone, saveTaskDraft, skipTask, snoozeTask } from "./actions";
 
 export interface TaskCardData {
@@ -95,7 +95,7 @@ export function TaskCard({ task }: { task: TaskCardData }) {
     <Card>
       <CardHeader className="gap-3 pb-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="gap-1">
+          <Badge variant={channelTone(task.channel)} className="gap-1">
             <Icon className="h-3 w-3" />
             {meta.label}
           </Badge>
@@ -109,7 +109,7 @@ export function TaskCard({ task }: { task: TaskCardData }) {
             {task.companyName}
           </Link>
           {task.score !== null && (
-            <Badge variant={task.score >= 60 ? "success" : "outline"}>{task.score}</Badge>
+            <Badge variant={scoreTone(task.score)}>{task.score}</Badge>
           )}
           <span className={overdue ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
             {relativeDay(task.dueAt)}

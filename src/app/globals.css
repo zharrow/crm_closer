@@ -5,52 +5,69 @@
 :root {
   --radius: 0.625rem;
 
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.596 0.145 163.225);
-  --warning: oklch(0.769 0.155 70.08);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
+  /* Forêt + terracotta.
+     Les neutres portent un voile vert très léger — c'est ce qui donne
+     le caractère sans jamais entrer en concurrence avec le sens. La
+     terracotta est réservée à l'action ; le vert dit « acquis », l'ocre
+     « à surveiller », la brique « problème ». Trois registres qui ne se
+     marchent pas dessus. */
+
+  --background: #F7F8F6;
+  --foreground: #16211C;
+  --card: #FFFFFF;
+  --card-foreground: #16211C;
+  --popover: #FFFFFF;
+  --popover-foreground: #16211C;
+  --primary: #B3542D;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EDF1EB;
+  --secondary-foreground: #16211C;
+  --muted: #EDF1EB;
+  --muted-foreground: #63705F;
+  --accent: #E7EDE5;
+  --accent-foreground: #16211C;
+  --destructive: #A6342A;
+  --destructive-foreground: #FFFFFF;
+  --success: #2E7D52;
+  --warning: #A2762A;
+  --border: #DFE5DE;
+  --input: #DFE5DE;
+  --ring: #B3542D;
+
+  /* Le canal se reconnaît sans lire le mot. */
+  --channel-email: #2F6E8F;
+  --channel-phone: #B3542D;
+  --channel-linkedin: #5C4E8A;
 }
 
 .dark {
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.696 0.17 162.48);
-  --warning: oklch(0.769 0.155 70.08);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 18%);
-  --ring: oklch(0.552 0.016 285.938);
+  --background: #0E1512;
+  --foreground: #E4EAE3;
+  --card: #16201B;
+  --card-foreground: #E4EAE3;
+  --popover: #16201B;
+  --popover-foreground: #E4EAE3;
+  --primary: #DB8355;
+  --primary-foreground: #1B0E07;
+  --secondary: #1B2620;
+  --secondary-foreground: #E4EAE3;
+  --muted: #1B2620;
+  --muted-foreground: #92A08E;
+  --accent: #1F2C25;
+  --accent-foreground: #E4EAE3;
+  --destructive: #E0685A;
+  --destructive-foreground: #1B0E07;
+  --success: #58B27C;
+  --warning: #D3A455;
+  --border: #24312A;
+  --input: #2A382F;
+  --ring: #DB8355;
+
+  --channel-email: #67A8C7;
+  --channel-phone: #DB8355;
+  --channel-linkedin: #9A8AC9;
 }
+
 
 @theme inline {
   --color-background: var(--background);
@@ -71,6 +88,9 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-channel-email: var(--channel-email);
+  --color-channel-phone: var(--channel-phone);
+  --color-channel-linkedin: var(--channel-linkedin);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

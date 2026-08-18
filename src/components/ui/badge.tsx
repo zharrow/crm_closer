@@ -13,6 +13,10 @@ const badgeVariants = cva(
         success: "border-transparent bg-success/15 text-success",
         warning: "border-transparent bg-warning/20 text-warning",
         outline: "text-foreground",
+        /* Le canal doit se reconnaître sans lire le mot. */
+        email: "border-transparent bg-channel-email/12 text-channel-email",
+        phone: "border-transparent bg-channel-phone/15 text-channel-phone",
+        linkedin: "border-transparent bg-channel-linkedin/12 text-channel-linkedin",
       },
     },
     defaultVariants: { variant: "default" },

@@ -5,7 +5,7 @@ import { ExternalLink } from "lucide-react";
 import { db, conversations, leadSignals, leads, messages, tasks } from "@/db/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime, relativeDay } from "@/lib/utils";
+import { formatDateTime, relativeDay, scoreTone } from "@/lib/utils";
 import { STATUS_LABEL, STATUS_VARIANT } from "../filters";
 import { LeadActions } from "./lead-actions";
 import { Conversation } from "./conversation";
@@ -61,7 +61,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             {STATUS_LABEL[lead.status] ?? lead.status}
           </Badge>
           {lead.score !== null && (
-            <Badge variant={lead.score >= 60 ? "success" : "outline"}>Score {lead.score}</Badge>
+            <Badge variant={scoreTone(lead.score)}>Score {lead.score}</Badge>
           )}
         </div>
 

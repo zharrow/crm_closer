@@ -406,7 +406,15 @@ export function SourcingCard({
                       >
                         {row.eligible}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">{row.enrolled}</td>
+                      <td
+                        className={
+                          row.enrolled > 0
+                            ? "px-3 py-2 text-right font-medium tabular-nums text-success"
+                            : "px-3 py-2 text-right tabular-nums text-muted-foreground"
+                        }
+                      >
+                        {row.enrolled}
+                      </td>
                       <td className="px-3 py-2 text-right tabular-nums">
                         {row.avgScore ?? "—"}
                       </td>
@@ -450,7 +458,7 @@ export function SourcingCard({
                             onClick={() => setThreshold(option.threshold)}
                             className={
                               active
-                                ? "rounded-md border border-foreground/30 bg-accent px-2.5 py-1.5 text-xs tabular-nums"
+                                ? "rounded-md border border-primary bg-primary/10 px-2.5 py-1.5 text-xs font-medium tabular-nums"
                                 : "rounded-md border px-2.5 py-1.5 text-xs tabular-nums hover:bg-accent"
                             }
                           >
@@ -631,7 +639,7 @@ export function SourcingCard({
                   <li key={key} className="flex items-start gap-3">
                     <span className="mt-0.5 shrink-0">
                       {step.status === "running" ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       ) : step.status === "done" ? (
                         <Check className="h-4 w-4 text-success" />
                       ) : step.status === "error" ? (
@@ -666,7 +674,7 @@ export function SourcingCard({
                       {ratio !== null && step.status === "running" && (
                         <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
                           <div
-                            className="h-full bg-foreground/60 transition-all duration-300"
+                            className="h-full bg-primary transition-all duration-300"
                             style={{ width: `${Math.round(ratio * 100)}%` }}
                           />
                         </div>
