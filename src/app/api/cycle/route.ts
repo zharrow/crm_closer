@@ -41,7 +41,6 @@ export async function POST() {
           report: {
             sourced: 0,
             enrolled: 0,
-            drafted: 0,
             errors: [error instanceof Error ? error.message : String(error)],
           },
         });

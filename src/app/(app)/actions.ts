@@ -216,7 +216,9 @@ export async function enrollLeadNow(leadId: string): Promise<{ error?: string }>
   const taskId = await enrollLead(leadId, sequence.id);
   if (!taskId) return { error: "Lead déjà inscrit, ou exclu." };
 
-  await runJob("draft-task", { taskId });
+  // Volontairement sans rédaction : la première action apparaît dans la
+  // file avec son bouton « Rédiger le message ». S'inscrire ne doit pas
+  // dépenser un appel que tu n'as pas demandé.
   refresh();
   return {};
 }

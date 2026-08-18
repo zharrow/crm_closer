@@ -35,6 +35,7 @@ export function missingSettings(s: Settings): string[] {
   if (!s.senderFirstName) missing.push("ton prénom");
   if (!s.offer) missing.push("ce que tu proposes");
   if (!s.painPoints) missing.push("les problèmes que tu résous");
+  if (!s.proofPoints) missing.push("tes réalisations comparables");
   if (!s.senderIdentity) missing.push("tes mentions légales d'expéditeur");
   if (!s.bookingUrl) missing.push("ton lien de prise de rendez-vous");
   return missing;

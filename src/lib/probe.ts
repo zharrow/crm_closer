@@ -20,11 +20,12 @@ export async function probeWebsite(url: string | null): Promise<Signal[]> {
     return [{ kind: "no_website", label: "aucun site web référencé", weight: 40 }];
   }
 
-  if (isSocialOnly(url)) {
+  const platform = platformOnly(url);
+  if (platform) {
     return [
       {
         kind: "social_only",
-        label: "présence limitée à une page de réseau social",
+        label: `pas de site propre, seulement une fiche ${platform}`,
         weight: 35,
       },
     ];
@@ -39,10 +40,40 @@ export async function probeWebsite(url: string | null): Promise<Signal[]> {
 
 /* ------------------------------------------------------------------ */
 
-const SOCIAL_HOSTS = ["facebook.com", "instagram.com", "linkedin.com", "pagesjaunes.fr"];
+/**
+ * Domaines qui ne sont pas le site du prospect, mais sa fiche chez
+ * quelqu'un d'autre : réseaux sociaux, annuaires, plateformes de
+ * rendez-vous.
+ *
+ * Les sonder n'a aucun sens — on inspecterait la page d'un tiers et on
+ * lui reprocherait ses défauts. Un cabinet dont l'unique présence est une
+ * fiche Maiia n'a pas « un formulaire de contact manquant » : il n'a pas
+ * de site du tout, ce qui est un bien meilleur angle commercial.
+ */
+const PLATFORM_HOSTS: [string, string][] = [
+  ["facebook.com", "Facebook"],
+  ["instagram.com", "Instagram"],
+  ["linkedin.com", "LinkedIn"],
+  ["pagesjaunes.fr", "Pages Jaunes"],
+  ["doctolib.fr", "Doctolib"],
+  ["maiia.com", "Maiia"],
+  ["keldoc.com", "KelDoc"],
+  ["mondocteur.fr", "MonDocteur"],
+  ["docavenue.com", "Docavenue"],
+  ["clicrdv.com", "ClicRDV"],
+  ["planity.com", "Planity"],
+  ["resalib.fr", "Resalib"],
+  ["treatwell.fr", "Treatwell"],
+  ["booksy.com", "Booksy"],
+  ["fresha.com", "Fresha"],
+  ["linktr.ee", "Linktree"],
+  ["google.com/maps", "Google Maps"],
+];
 
-function isSocialOnly(url: string): boolean {
-  return SOCIAL_HOSTS.some((host) => url.includes(host));
+function platformOnly(url: string): string | null {
+  const lower = url.toLowerCase();
+  const hit = PLATFORM_HOSTS.find(([host]) => lower.includes(host));
+  return hit ? hit[1] : null;
 }
 
 async function inspect(url: string): Promise<Signal[]> {
@@ -78,6 +109,98 @@ async function inspect(url: string): Promise<Signal[]> {
     });
   }
 
+  // Les quatre détections suivantes visent ce que tu vends réellement,
+  // pas la conformité technique du site. Un kiné se moque du responsive ;
+  // il perd une heure par jour à décrocher pour caler des rendez-vous.
+
+  if (!hasOnlineBooking(html)) {
+    signals.push({
+      kind: "no_booking",
+      label: "pas de prise de rendez-vous en ligne",
+      weight: 30,
+    });
+  }
+
+  if (!hasContactPath(html)) {
+    signals.push({
+      kind: "no_contact_path",
+      label: "aucun formulaire ni page de contact",
+      weight: 25,
+    });
+  }
+
+  const builder = siteBuilder(html);
+  if (builder) {
+    signals.push({
+      kind: "diy_builder",
+      label: `site construit sur ${builder}`,
+      weight: 20,
+    });
+  }
+
+  if (!/mentions[-_\s]?l[ée]gales/i.test(html)) {
+    // Obligation légale en France : l'absence est un constat vérifiable
+    // et une entrée en matière difficile à contester.
+    signals.push({
+      kind: "no_legal",
+      label: "pas de mentions légales",
+      weight: 10,
+    });
+  }
+
+  // Design et expérience. Rien d'esthétique ici : on ne peut pas juger un
+  // goût sur du HTML brut. Ce sont des marqueurs objectifs de soin, tous
+  // vérifiables par le prospect lui-même en trente secondes.
+
+  if (/<frameset|<table[^>]+(?:width=["']100%|cellpadding)/i.test(html)) {
+    signals.push({
+      kind: "table_layout",
+      label: "mise en page en tableaux, comme au début des années 2000",
+      weight: 25,
+    });
+  }
+
+  if (hasTracking(html) && !hasConsentBanner(html)) {
+    signals.push({
+      kind: "tracking_no_consent",
+      label: "traceurs chargés sans bandeau de consentement",
+      weight: 20,
+    });
+  }
+
+  const words = visibleWordCount(html);
+  if (words < 120) {
+    signals.push({
+      kind: "thin_content",
+      label: `page d'accueil quasi vide (${words} mots)`,
+      weight: 15,
+    });
+  }
+
+  if (!/property=["']og:(?:title|image)["']/i.test(html)) {
+    signals.push({
+      kind: "no_og",
+      label: "aperçu cassé quand le lien est partagé",
+      weight: 10,
+    });
+  }
+
+  if (!/@font-face|fonts\.(?:googleapis|gstatic|bunny)|typekit|font-family:\s*["']/i.test(html)) {
+    signals.push({
+      kind: "no_webfont",
+      label: "typographie laissée aux réglages par défaut du navigateur",
+      weight: 10,
+    });
+  }
+
+  if (!/href=["']tel:/i.test(html)) {
+    signals.push({
+      kind: "phone_not_clickable",
+      label: "numéro non cliquable sur mobile",
+      weight: 10,
+    });
+  }
+
   // Un site sain ne produit aucun signal : on en pose un neutre pour que
   // le lead soit tout de même scoré, plutôt que de rester bloqué en
   // « enrichi » indéfiniment faute de ligne dans lead_signals.
@@ -86,6 +209,105 @@ async function inspect(url: string): Promise<Signal[]> {
   }
 
   return signals;
+}
+
+/* ------------------------------------------------------------------ */
+
+/**
+ * Prestataires de rendez-vous en ligne courants en France, plus les
+ * chemins d'un système maison. On ne conclut à l'absence que faute de
+ * tout indice : mieux vaut rater un signal que d'écrire à un cabinet
+ * qu'il n'a pas de prise de rendez-vous alors qu'il en a une.
+ */
+const BOOKING_MARKERS = [
+  "doctolib",
+  "maiia",
+  "keldoc",
+  "mondocteur",
+  "docavenue",
+  "planity",
+  "calendly",
+  "resalib",
+  "treatwell",
+  "fresha",
+  "booksy",
+  "clicrdv",
+  "simplybook",
+  "timify",
+  "wecasa",
+  "kiute",
+  "agendize",
+  "youplanning",
+  "resamania",
+  "/reservation",
+  "/reserver",
+  "/booking",
+  "/prendre-rendez-vous",
+  "/prise-de-rendez-vous",
+  "/rdv",
+];
+
+function hasOnlineBooking(html: string): boolean {
+  const lower = html.toLowerCase();
+  return BOOKING_MARKERS.some((marker) => lower.includes(marker));
+}
+
+/** Un formulaire sur l'accueil, ou au moins un chemin vers un contact. */
+function hasContactPath(html: string): boolean {
+  if (/<form[^>]*>/i.test(html)) return true;
+  return /href=["'][^"']*contact/i.test(html) || /href=["']mailto:/i.test(html);
+}
+
+const BUILDERS: [RegExp, string][] = [
+  [/wix\.com|wixstatic/i, "Wix"],
+  [/jimdo/i, "Jimdo"],
+  [/weebly/i, "Weebly"],
+  [/e-monsite/i, "e-monsite"],
+  [/sitew/i, "SiteW"],
+  [/webnode/i, "Webnode"],
+  [/sites\.google\.com/i, "Google Sites"],
+  [/solocal|pagesjaunes/i, "Pages Jaunes"],
+  [/squarespace/i, "Squarespace"],
+];
+
+/**
+ * Un éditeur grand public n'est pas un défaut en soi : c'est un signe
+ * que personne n'a été payé pour ce site, donc qu'il n'y a pas de
+ * prestataire en place à déloger.
+ */
+function siteBuilder(html: string): string | null {
+  const head = html.slice(0, 40_000);
+  for (const [pattern, name] of BUILDERS) {
+    if (pattern.test(head)) return name;
+  }
+  return null;
+}
+
+const TRACKERS = /gtag\(|googletagmanager|google-analytics|fbq\(|connect\.facebook\.net|hotjar|matomo/i;
+const CONSENT = /axeptio|tarteaucitron|cookiebot|didomi|orejime|cookieconsent|cookie-consent|klaro|osano/i;
+
+function hasTracking(html: string): boolean {
+  return TRACKERS.test(html);
+}
+
+function hasConsentBanner(html: string): boolean {
+  return CONSENT.test(html);
+}
+
+/**
+ * Compte grossier des mots visibles : on retire scripts, styles et
+ * balises, puis on compte. Sert à repérer une page d'accueil qui ne dit
+ * rien — le cas le plus fréquent chez un professionnel qui a « fait un
+ * site » sans jamais écrire le contenu.
+ */
+function visibleWordCount(html: string): number {
+  const text = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z]+;/gi, " ");
+
+  return text.split(/\s+/).filter((word) => word.length > 1).length;
 }
 
 async function fetchWithTimeout(url: string): Promise<Response> {

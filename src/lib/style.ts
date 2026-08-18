@@ -35,6 +35,23 @@ const MAX_WORDS = 130;
 const MAX_SENTENCE_WORDS = 30;
 const MIN_STDDEV = 3;
 
+/**
+ * Corrige ce qui relève de la typographie, avant tout contrôle.
+ *
+ * Le tiret cadratin faisait rejeter 100 % des brouillons : le modèle en
+ * remettait à chaque tentative, on payait trois appels et on gardait
+ * quand même la version fautive. Une règle de forme se applique, elle ne
+ * se demande pas. Les règles restantes portent sur l'écriture, pas sur
+ * les caractères — celles-là justifient une réécriture.
+ */
+export function normalizeTypography(text: string): string {
+  return text
+    .replace(/\s*—\s*/g, ", ")
+    .replace(/,\s*,/g, ",")
+    .replace(/,\s*([.!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ");
+}
+
 export interface StyleReport {
   ok: boolean;
   problems: string[];

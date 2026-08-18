@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db, leadSignals, leads } from "@/db/client";
-import { probeWebsite } from "@/lib/probe";
+import { probeWebsite, type Signal } from "@/lib/probe";
 import { findCompany, pappersEnabled } from "@/lib/pappers";
 import { findContact } from "@/lib/contact-finder";
 
@@ -20,7 +20,7 @@ export async function enrichLead({ leadId }: { leadId: string }): Promise<void> 
   if (!lead) return;
 
   const signals = await probeWebsite(lead.website);
-  await saveSignals(leadId, signals);
+  await saveSignals(leadId, [...signals, ...reviewSignals(lead.reviewCount)]);
 
   if (pappersEnabled() && !lead.siren) {
     await enrichFromPappers(leadId, lead.companyName, lead.postalCode);
@@ -73,6 +73,21 @@ async function enrichFromPappers(
   }
   if (!company) return;
 
+  if (company.headcount && company.headcount >= 5) {
+    await db
+      .insert(leadSignals)
+      .values({
+        leadId,
+        kind: "headcount",
+        label: `${company.headcount} salariés`,
+        weight: 15,
+      })
+      .onConflictDoUpdate({
+        target: [leadSignals.leadId, leadSignals.kind],
+        set: { label: `${company.headcount} salariés`, weight: 15, detectedAt: new Date() },
+      });
+  }
+
   await db
     .update(leads)
     .set({
@@ -97,13 +112,65 @@ async function enrichFromPappers(
       leadId,
       kind: "recent_company",
       label: `entreprise créée il y a moins de ${RECENT_YEARS} ans`,
-      weight: 20,
+      weight: 10,
     })
     .onConflictDoNothing();
 }
 
 /**
- * Score déterministe = somme des poids des signaux, bornée à 100.
+ * Le poids d'un établissement, lu dans ses avis Google.
+ *
+ * C'est la donnée la plus utile que Places renvoie, et elle était
+ * facturée puis jetée. Un cabinet à 180 avis avec un site daté est un
+ * client ; le même sans site à 2 avis est probablement une coquille.
+ */
+function reviewSignals(reviewCount: number | null): Signal[] {
+  if (reviewCount === null) return [];
+
+  if (reviewCount >= 100) {
+    return [
+      { kind: "reviews_many", label: `${reviewCount} avis Google`, weight: 25 },
+    ];
+  }
+  if (reviewCount >= 30) {
+    return [{ kind: "reviews_some", label: `${reviewCount} avis Google`, weight: 15 }];
+  }
+  if (reviewCount < 5) {
+    return [
+      {
+        kind: "reviews_few",
+        label: `seulement ${reviewCount} avis Google`,
+        weight: -10,
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Les signaux qui parlent du prospect, non de son site.
+ *
+ * La distinction ne vit qu'ici, dans le code : elle relève du modèle
+ * commercial, pas de la donnée. Ajouter une colonne à `lead_signals`
+ * aurait figé en base une décision qu'on veut pouvoir revoir.
+ */
+const VALUE_KINDS = new Set([
+  "reviews_many",
+  "reviews_some",
+  "reviews_few",
+  "headcount",
+  "recent_company",
+]);
+
+/**
+ * Score déterministe, en deux axes.
+ *
+ * `besoin` additionne ce qui cloche sur le site — c'est lui qui fournit
+ * l'angle du message. `valeur` additionne ce que pèse le prospect. Le
+ * total sert au tri et au seuil, mais les deux composantes restent
+ * lisibles : « 65 » ne dit pas s'il s'agit d'un gros cabinet au site
+ * correct ou d'une petite structure sans rien du tout.
+ *
  * Volontairement sans IA : reproductible, débuggable et gratuit. L'IA
  * intervient plus tard, pour rédiger à partir de ces mêmes signaux.
  */
@@ -113,13 +180,27 @@ export async function scoreLead(leadId: string): Promise<void> {
     .from(leadSignals)
     .where(eq(leadSignals.leadId, leadId));
 
-  const total = signals.reduce((sum, s) => sum + s.weight, 0);
-  const score = Math.max(0, Math.min(100, total));
-  const labels = signals.filter((s) => s.weight > 0).map((s) => s.label);
+  let need = 0;
+  let value = 0;
+  for (const signal of signals) {
+    if (VALUE_KINDS.has(signal.kind)) value += signal.weight;
+    else need += signal.weight;
+  }
+
+  const score = Math.max(0, Math.min(100, need + value));
+
+  // Les motifs les plus lourds d'abord : c'est le premier que Claude
+  // reprendra en accroche, autant que ce soit le plus parlant.
+  const labels = signals
+    .filter((signal) => signal.weight > 0)
+    .sort((a, b) => b.weight - a.weight)
+    .map((signal) => signal.label);
 
   await db
     .update(leads)
     .set({
+      needScore: Math.max(0, need),
+      valueScore: value,
       score,
       scoreRationale: labels.join(" · ") || "aucun signal exploitable",
       scoredAt: new Date(),

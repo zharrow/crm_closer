@@ -49,14 +49,14 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
         <ActionButton
           size="sm"
           disabled={pending}
-          tooltip="Démarre la séquence de relance : première action créée et rédigée tout de suite."
+          tooltip="Démarre la séquence de relance : la première action arrive dans ta file, à rédiger quand tu veux."
           confirm={{
             title: "Inscrire en séquence ?",
             description:
-              "Le prospect passe au statut « inscrit » et sa première action apparaît immédiatement dans « À faire aujourd'hui ». Claude rédige le message dans la foulée — c'est un appel facturé. Les relances suivantes (LinkedIn à +4 jours, puis emails à +7 et +10 jours) ne seront créées qu'au fur et à mesure que tu marques la précédente comme envoyée. Rien ne part tout seul.",
+              "Le prospect passe au statut « inscrit » et sa première action apparaît immédiatement dans « À faire aujourd'hui ». Aucun message n'est rédigé à cet instant : tu déclencheras la rédaction depuis la carte, quand tu voudras t'en occuper. Les relances suivantes ne sont créées qu'au fur et à mesure que tu marques la précédente comme envoyée. Rien ne part tout seul.",
             action: "Inscrire",
           }}
-          onClick={() => run(() => enrollLeadNow(leadId), "Inscrit — première action générée")}
+          onClick={() => run(() => enrollLeadNow(leadId), "Inscrit — première action dans ta file")}
         >
           <Play className="h-4 w-4" />
           Inscrire en séquence

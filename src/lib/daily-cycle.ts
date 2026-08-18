@@ -1,12 +1,18 @@
-import { and, asc, eq, lte, sql } from "drizzle-orm";
-import { db, leads, tasks } from "@/db/client";
+import { sql } from "drizzle-orm";
+import { db, leads } from "@/db/client";
 import { getSettings } from "@/lib/settings";
 import { enrollEligibleLeads } from "@/lib/sequences";
 import { enqueue } from "@/lib/queue";
 import { searchPlaces, cityFrom, postalCodeFrom } from "@/lib/places";
 
 /**
- * Le cycle quotidien : sourcer, inscrire, rédiger.
+ * Le cycle quotidien : sourcer, puis inscrire.
+ *
+ * Il ne rédige pas. La rédaction est le seul poste réellement coûteux de
+ * la chaîne, et rédiger d'avance vingt messages dont tu n'en enverras
+ * peut-être que cinq revient à jeter les quinze autres. Chaque carte de
+ * la file porte son bouton « Rédiger le message » : le texte est produit
+ * au moment où tu décides de t'en servir, à partir de signaux frais.
  *
  * Il vit ici et non dans la route de cron parce qu'il a deux
  * déclencheurs — le cron Vercel de 5 h, et le bouton « Lancer un cycle »
@@ -18,7 +24,7 @@ import { searchPlaces, cityFrom, postalCodeFrom } from "@/lib/places";
  * hormis le modèle.
  */
 
-export type CycleStep = "sourcing" | "enroll" | "draft";
+export type CycleStep = "sourcing" | "enroll";
 
 /**
  * Ce que le cycle raconte pendant qu'il tourne.
@@ -42,14 +48,12 @@ export interface CycleReport {
   sourced: number;
   /** Leads inscrits en séquence. */
   enrolled: number;
-  /** Messages mis en rédaction. */
-  drafted: number;
   errors: string[];
 }
 
 export async function runDailyCycle(emit: CycleEmitter = () => {}): Promise<CycleReport> {
   const settings = await getSettings();
-  const report: CycleReport = { sourced: 0, enrolled: 0, drafted: 0, errors: [] };
+  const report: CycleReport = { sourced: 0, enrolled: 0, errors: [] };
 
   const queries = splitQueries(settings.placesQueries);
   const sourcingOn = settings.sourcingEnabled && Boolean(process.env.GOOGLE_PLACES_API_KEY);
@@ -59,7 +63,7 @@ export async function runDailyCycle(emit: CycleEmitter = () => {}): Promise<Cycl
       type: "start",
       step: "sourcing",
       total: queries.length,
-      label: `${queries.length} requête${queries.length > 1 ? "s" : ""} à lancer chez Google, jusqu'à 60 fiches chacune. Les fiches déjà connues sont mises à jour ; les nouvelles sont sondées et scorées dans la foulée.`,
+      label: `${queries.length} requête${queries.length > 1 ? "s" : ""} à lancer chez Google, jusqu'à 40 fiches chacune. Les fiches déjà connues sont mises à jour ; les nouvelles sont sondées et scorées dans la foulée.`,
     });
     try {
       report.sourced = await runSourcing(queries, emit);
@@ -102,27 +106,6 @@ export async function runDailyCycle(emit: CycleEmitter = () => {}): Promise<Cycl
   } catch (error) {
     report.errors.push(`inscription : ${message(error)}`);
     emit({ type: "error", step: "enroll", message: message(error) });
-  }
-
-  emit({
-    type: "start",
-    step: "draft",
-    total: null,
-    label: `Rédaction par Claude des messages échus aujourd'hui, ${settings.dailyTaskCap} au maximum. Un appel facturé par message, quelques secondes chacun.`,
-  });
-  try {
-    report.drafted = await draftDueTasks(settings.dailyTaskCap, emit);
-    emit({
-      type: "finish",
-      step: "draft",
-      label:
-        report.drafted > 0
-          ? `${report.drafted} message${report.drafted > 1 ? "s" : ""} prêt${report.drafted > 1 ? "s" : ""} à relire dans « À faire aujourd'hui ».`
-          : "Aucune action échue à rédiger.",
-    });
-  } catch (error) {
-    report.errors.push(`rédaction : ${message(error)}`);
-    emit({ type: "error", step: "draft", message: message(error) });
   }
 
   emit({ type: "done", report });
@@ -171,6 +154,7 @@ async function runSourcing(list: string[], emit: CycleEmitter): Promise<number> 
           postalCode: postalCodeFrom(place.address),
           website: place.website,
           phone: place.phone,
+          reviewCount: place.reviewCount,
           lat: place.lat,
           lng: place.lng,
           placesRefreshedAt: new Date(),
@@ -184,6 +168,7 @@ async function runSourcing(list: string[], emit: CycleEmitter): Promise<number> 
             companyName: sql`excluded.company_name`,
             website: sql`excluded.website`,
             phone: sql`excluded.phone`,
+            reviewCount: sql`excluded.review_count`,
             placesRefreshedAt: new Date(),
             updatedAt: new Date(),
           },
@@ -217,38 +202,6 @@ async function runSourcing(list: string[], emit: CycleEmitter): Promise<number> 
   }
 
   return sourced;
-}
-
-/**
- * Rédige les messages des tâches échues aujourd'hui. Le brouillon est
- * généré au dernier moment plutôt qu'à la création de la tâche : une
- * relance programmée dans sept jours doit partir des signaux frais, pas
- * de ceux d'il y a une semaine.
- */
-async function draftDueTasks(cap: number, emit: CycleEmitter): Promise<number> {
-  if (cap <= 0) return 0;
-
-  const due = await db
-    .select({ id: tasks.id })
-    .from(tasks)
-    .where(and(eq(tasks.status, "pending"), lte(tasks.dueAt, new Date())))
-    .orderBy(asc(tasks.dueAt))
-    .limit(cap);
-
-  let done = 0;
-  for (const task of due) {
-    emit({
-      type: "advance",
-      step: "draft",
-      done,
-      total: due.length,
-      label: `Rédaction du message ${done + 1}/${due.length}…`,
-    });
-    await enqueue("draft-task", { taskId: task.id });
-    done++;
-  }
-
-  return due.length;
 }
 
 function message(error: unknown): string {

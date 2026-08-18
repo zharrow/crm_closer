@@ -46,11 +46,11 @@ export async function saveSettings(formData: FormData): Promise<{ error?: string
     bookingUrl: text("bookingUrl"),
     offer: text("offer"),
     painPoints: text("painPoints"),
+    proofPoints: text("proofPoints"),
     draftModel: MODELS.includes(draftModel) ? draftModel : "claude-opus-5",
     draftEffort: EFFORTS.includes(draftEffort) ? draftEffort : "low",
     minEnrollScore: number("minEnrollScore", 40),
     enrollBatch: number("enrollBatch", 20),
-    dailyTaskCap: number("dailyTaskCap", 20),
     placesQueries: lines("placesQueries"),
     sourcingEnabled: formData.get("sourcingEnabled") === "on",
   });

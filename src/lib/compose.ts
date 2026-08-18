@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db, aiRuns, leadSignals, type Lead, type Settings } from "@/db/client";
 import { completeStructured } from "./anthropic";
-import { checkStyle, correctionHint } from "./style";
+import { checkStyle, correctionHint, normalizeTypography } from "./style";
+import { remedyFor } from "./remedies";
 import { inspectDraft } from "./guardrails";
 import {
   assemble,
@@ -52,8 +53,19 @@ function buildSystem(settings: Settings, channel: ChannelKey): string {
     "Ce qu'il propose :",
     settings.offer || "(non renseigné)",
     "",
+    "Cette description dit ce qu'il sait faire, pas ce qu'il faut annoncer.",
+    "Retiens au plus une capacité, celle qui répond au constat que tu as",
+    "choisi. N'énumère jamais son catalogue, et ne mentionne pas une",
+    "compétence que rien dans le constat n'appelle.",
+    "",
     "Les problèmes qu'il résout :",
     settings.painPoints || "(non renseigné)",
+    "",
+    "Ce qu'il a déjà livré, du même monde que le prospect :",
+    settings.proofPoints || "(non renseigné)",
+    "Tu peux t'appuyer sur une seule de ces réalisations, en une incise",
+    "courte, et uniquement si elle parle au prospect. Jamais deux, jamais",
+    "une que tu inventes, jamais de nom de client absent de cette liste.",
     "",
     "Tu ne produis pas un message complet : uniquement le contenu des",
     "fentes qu'on te demande. Chaque fente est un fragment autonome, sans",
@@ -69,6 +81,12 @@ function buildSystem(settings: Settings, channel: ChannelKey): string {
     "Si le contexte semble appeler l'un de ces éléments, reste sur le",
     "constat et laisse la question ouverte.",
     "",
+    "Chaque constat est accompagné de ce que l'expéditeur peut apporter.",
+    "Appuie-toi dessus pour que le message ouvre sur une suite concrète",
+    "au lieu de s'arrêter au diagnostic — sans rien chiffrer et sans",
+    "détailler la technique. Un constat, ce qu'il implique pour le",
+    "prospect, ce qu'on peut y faire.",
+    "",
     "Style : vouvoiement, phrases courtes de longueurs variées,",
     "vocabulaire concret. Pas de superlatif, pas de jargon commercial,",
     "pas de tiret cadratin, pas de formule d'accroche éculée. Tu pars",
@@ -79,7 +97,7 @@ function buildSystem(settings: Settings, channel: ChannelKey): string {
 
 function buildPrompt(
   lead: Lead,
-  signals: string[],
+  signals: LoadedSignal[],
   slots: Record<SlotName, string>,
   brief: string,
   hint: string,
@@ -100,8 +118,16 @@ function buildPrompt(
     "Faits vérifiés :",
     facts.join("\n"),
     "",
-    "Constats exploitables :",
-    signals.length > 0 ? signals.map((s) => `- ${s}`).join("\n") : "- aucun",
+    "Constats exploitables, du plus fort au plus faible.",
+    "Chacun est suivi de ce que l'expéditeur peut apporter pour y répondre :",
+    signals.length > 0
+      ? signals
+          .map((signal) => {
+            const remedy = remedyFor(signal.kind);
+            return remedy ? `- ${signal.label}\n  → il peut apporter : ${remedy}` : `- ${signal.label}`;
+          })
+          .join("\n")
+      : "- aucun",
     "",
     `Intention de cette étape : ${brief}`,
     "",
@@ -173,7 +199,7 @@ export async function draftMessage({
       cachedTokens: totalUsage.cachedTokens + usage.cachedTokens,
     };
 
-    body = assemble(channel, data, ctx);
+    body = normalizeTypography(assemble(channel, data, ctx));
 
     const report = checkStyle(body);
     if (report.ok) break;
@@ -203,11 +229,19 @@ export async function draftMessage({
   };
 }
 
-async function loadSignals(leadId: string): Promise<string[]> {
+interface LoadedSignal {
+  kind: string;
+  label: string;
+  weight: number;
+}
+
+async function loadSignals(leadId: string): Promise<LoadedSignal[]> {
   const rows = await db
-    .select({ label: leadSignals.label })
+    .select({ kind: leadSignals.kind, label: leadSignals.label, weight: leadSignals.weight })
     .from(leadSignals)
     .where(eq(leadSignals.leadId, leadId));
 
-  return rows.map((row) => row.label);
+  // Le plus lourd d'abord : c'est celui que la rédaction prendra en
+  // accroche, et l'ordre d'insertion en base n'a aucun sens éditorial.
+  return rows.filter((row) => row.weight > 0).sort((a, b) => b.weight - a.weight);
 }

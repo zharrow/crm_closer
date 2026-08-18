@@ -73,25 +73,37 @@ export function SettingsForm({
         <CardContent className="flex flex-col gap-4">
           <Field
             label="Ce que tu proposes"
-            hint="Une ou deux phrases simples. C'est le socle de chaque message rédigé."
+            hint="Ce que le client obtient, pas ta méthode. « Sur-mesure » et « cahier des charges » décrivent ta façon de travailler ; « il ne décroche plus pour caler un rendez-vous » décrit ce qu'il gagne. Ce champ part tel quel dans chaque message : c'est tout ce que le modèle sait de toi."
           >
             <Textarea
               name="offer"
               rows={3}
               defaultValue={settings.offer}
-              placeholder="Je crée des sites et applications sur mesure qui font gagner du temps aux entreprises."
+              placeholder="Ex. : je refais les sites des cabinets pour qu'ils remplissent leur agenda en ligne au lieu de décrocher toute la journée — et qu'ils aient l'air aussi sérieux en ligne qu'en cabinet."
             />
           </Field>
 
           <Field
             label="Les problèmes que tu résous"
-            hint="Concrets et observables. Le modèle relie les signaux détectés à ces problèmes."
+            hint="Observables de l'extérieur, sinon ils ne servent à rien : la sonde détecte des constats sur le site, ce champ leur donne un sens. Pense aussi au design et à l'usage, pas seulement à la technique."
           >
             <Textarea
               name="painPoints"
               rows={3}
               defaultValue={settings.painPoints}
-              placeholder="Site vieillissant qui ne convertit pas, tâches manuelles chronophages, pas de prise de rendez-vous en ligne."
+              placeholder="Ex. : un site qui fait daté à côté des concurrents, des demandes qui se perdent faute de formulaire, une prise de rendez-vous encore au téléphone, des pages illisibles sur mobile."
+            />
+          </Field>
+
+          <Field
+            label="Tes réalisations comparables"
+            hint="Une ou deux, du même monde que tes prospects — une promesse se conteste, une réalisation se vérifie. Dis ce que le client a obtenu, pas la technologie employée. Évite les chiffres : un montant ou un délai chiffré fait recaler le brouillon par les garde-fous."
+          >
+            <Textarea
+              name="proofPoints"
+              rows={3}
+              defaultValue={settings.proofPoints}
+              placeholder="Ex. : pour un artisan verrier, un site vitrine où ses réalisations se voient enfin et où les demandes arrivent par formulaire au lieu du téléphone."
             />
           </Field>
         </CardContent>
@@ -173,9 +185,6 @@ export function SettingsForm({
             <Input name="enrollBatch" type="number" min={0} max={200} defaultValue={settings.enrollBatch} />
           </Field>
 
-          <Field label="Brouillons / jour" hint="Plafond de rédactions automatiques par exécution.">
-            <Input name="dailyTaskCap" type="number" min={0} max={200} defaultValue={settings.dailyTaskCap} />
-          </Field>
         </CardContent>
       </Card>
 

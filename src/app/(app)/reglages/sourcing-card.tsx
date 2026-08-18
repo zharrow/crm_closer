@@ -23,15 +23,14 @@ import type { CycleEvent, CycleReport, CycleStep } from "@/lib/daily-cycle";
 import type { QueryYield, ThresholdOption } from "@/lib/query-suggestions";
 import { acceptSuggestion, dismissSuggestion, restoreSuggestion, suggestQueries } from "./actions";
 
-/** Ce qu'une requête Places ramène au maximum, en 3 pages de 20. */
-const PLACES_PER_QUERY = 60;
+/** Ce qu'une requête Places ramène au maximum : 2 pages de 20. */
+const PLACES_PER_QUERY = 40;
 
-const STEP_ORDER: CycleStep[] = ["sourcing", "enroll", "draft"];
+const STEP_ORDER: CycleStep[] = ["sourcing", "enroll"];
 
 const STEP_TITLES: Record<CycleStep, string> = {
   sourcing: "Sourcing Google Places",
   enroll: "Inscription en séquence",
-  draft: "Rédaction des messages",
 };
 
 interface StepState {
@@ -46,7 +45,7 @@ interface StepState {
 
 function idleSteps(): Record<CycleStep, StepState> {
   const blank: StepState = { status: "pending", expect: "", detail: "", done: null, total: null };
-  return { sourcing: { ...blank }, enroll: { ...blank }, draft: { ...blank } };
+  return { sourcing: { ...blank }, enroll: { ...blank } };
 }
 
 function splitQueries(raw: string): string[] {
@@ -611,7 +610,7 @@ export function SourcingCard({
               confirm={{
                 title: "Lancer le cycle maintenant ?",
                 description:
-                  "Les trois étapes du cron s'enchaînent : sourcing Google Places sur tes requêtes, inscription en séquence des leads joignables au-dessus du seuil — par email, ou par téléphone quand il n'y a pas d'adresse — puis rédaction par Claude des messages du jour. Places et Claude sont facturés à l'usage. Aucun message n'est envoyé : tu les retrouveras à relire dans « À faire aujourd'hui ».",
+                  "Deux étapes : sourcing Google Places sur tes requêtes, puis inscription en séquence des leads joignables au-dessus du seuil, par email ou par téléphone quand il n'y a pas d'adresse. Seul Google est facturé ici. Aucun message n'est rédigé et rien n'est envoyé : les actions arrivent dans « À faire aujourd'hui » avec leur bouton « Rédiger le message », et c'est toi qui décides quand dépenser un appel.",
                 action: "Lancer le cycle",
               }}
             >
@@ -704,9 +703,7 @@ export function SourcingCard({
                 <span className="font-medium">{report.sourced}</span> fiche
                 {report.sourced > 1 ? "s" : ""} sourcée{report.sourced > 1 ? "s" : ""} ·{" "}
                 <span className="font-medium">{report.enrolled}</span> lead
-                {report.enrolled > 1 ? "s" : ""} inscrit{report.enrolled > 1 ? "s" : ""} ·{" "}
-                <span className="font-medium">{report.drafted}</span> message
-                {report.drafted > 1 ? "s" : ""} en rédaction
+                {report.enrolled > 1 ? "s" : ""} inscrit{report.enrolled > 1 ? "s" : ""}
               </p>
               {report.errors.length > 0 && (
                 <ul className="mt-2 flex flex-col gap-1 text-xs text-destructive">

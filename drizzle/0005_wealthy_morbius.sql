@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "proof_points" text DEFAULT '' NOT NULL;

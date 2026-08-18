@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ScrollMemory } from "@/components/scroll-memory";
 import { and, asc, count, eq, lte, sql } from "drizzle-orm";
 import { AlertTriangle, Inbox } from "lucide-react";
 import { db, leads, tasks } from "@/db/client";
@@ -71,6 +72,7 @@ export default async function TodayPage() {
 
   return (
     <div className="flex flex-col gap-8">
+      <ScrollMemory />
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">À faire aujourd&apos;hui</h1>
         <p className="mt-1.5 text-muted-foreground">

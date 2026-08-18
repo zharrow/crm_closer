@@ -61,7 +61,16 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             {STATUS_LABEL[lead.status] ?? lead.status}
           </Badge>
           {lead.score !== null && (
-            <Badge variant={scoreTone(lead.score)}>Score {lead.score}</Badge>
+            <>
+              <Badge variant={scoreTone(lead.score)}>Score {lead.score}</Badge>
+              {/* Le détail répond à la question que le total masque :
+                  gros prospect au site correct, ou petite structure sans
+                  rien du tout ? Les deux peuvent faire 40. */}
+              <span className="text-xs tabular-nums text-muted-foreground">
+                besoin {lead.needScore ?? "—"} · valeur {lead.valueScore ?? "—"}
+                {lead.reviewCount !== null && ` · ${lead.reviewCount} avis`}
+              </span>
+            </>
           )}
         </div>
 

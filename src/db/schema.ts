@@ -134,6 +134,20 @@ export const leads = pgTable(
     revenue: integer("revenue"),
     incorporatedAt: timestamp("incorporated_at", { withTimezone: true }),
 
+    /** Nombre d'avis Google, ramené par Places. Meilleur indicateur
+     *  gratuit du poids réel d'un établissement. */
+    reviewCount: integer("review_count"),
+
+    /**
+     * Le score total répond à deux questions distinctes, d'où deux
+     * composantes conservées séparément : `needScore` dit ce qui cloche
+     * sur le site — c'est lui qui fournit l'angle du message — et
+     * `valueScore` dit ce que le prospect pèse. Un cabinet sans site
+     * avec 3 avis et un cabinet sans site avec 300 avis avaient
+     * exactement la même note tant qu'il n'y avait qu'un seul chiffre.
+     */
+    needScore: integer("need_score"),
+    valueScore: integer("value_score"),
     score: integer("score"),
     scoreRationale: text("score_rationale"),
     scoredAt: timestamp("scored_at", { withTimezone: true }),
@@ -434,13 +448,19 @@ export const settings = pgTable("settings", {
   offer: text("offer").notNull().default(""),
   /** Les problèmes concrets que tu résous. */
   painPoints: text("pain_points").notNull().default(""),
+  /**
+   * Une ou deux réalisations comparables à ce que vivent tes prospects.
+   * Une promesse se conteste, une réalisation se vérifie — et c'est la
+   * seule preuve dont dispose la rédaction. Nommée `proof_points` par
+   * symétrie avec `pain_points` : même forme, même rôle dans le prompt.
+   */
+  proofPoints: text("proof_points").notNull().default(""),
 
   draftModel: text("draft_model").notNull().default("claude-opus-5"),
   draftEffort: text("draft_effort").notNull().default("low"),
 
   minEnrollScore: integer("min_enroll_score").notNull().default(40),
   enrollBatch: integer("enroll_batch").notNull().default(20),
-  dailyTaskCap: integer("daily_task_cap").notNull().default(20),
 
   placesQueries: text("places_queries").notNull().default(""),
   sourcingEnabled: boolean("sourcing_enabled").notNull().default(false),
