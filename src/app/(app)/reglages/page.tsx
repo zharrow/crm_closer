@@ -10,6 +10,7 @@ import { pappersEnabled } from "@/lib/pappers";
 import { SettingsForm } from "./settings-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Réglages" };
@@ -53,6 +54,23 @@ export default async function SettingsPage() {
         yields={yields}
         thresholds={thresholds}
       />
+
+      {/* Hors du formulaire, volontairement : ce choix vaut pour cet appareil
+          et s'applique au clic. Le glisser entre des champs qui attendent
+          « Enregistrer » laisserait croire qu'il faut le valider aussi. */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Apparence</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          <ThemeToggle />
+          <p className="text-meta leading-relaxed text-muted-foreground">
+            S&apos;applique tout de suite, et cet appareil s&apos;en souvient. Ce
+            réglage ne part pas en base : ton téléphone et ton ordinateur peuvent
+            donc avoir chacun le leur.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">

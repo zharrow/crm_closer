@@ -179,6 +179,23 @@ marqué.
 
 ---
 
+## Le sens ne se délègue pas à la mise en page
+
+Une ligne de texte doit rester lisible sans son CSS. JSX ne laisse aucune
+espace entre deux éléments écrits sur des lignes séparées : une suite de
+valeurs qui ne tient qu'au `gap` du conteneur se recolle en
+« 485 leads0 ont répondu0 RDV » dès que `display: flex` n'arrive pas — feuille
+servie en retard, rechargement à chaud à mi-course, style qui échoue.
+
+La séparation appartient donc au contenu, pas au style. Le point médian
+(`·`) est la ponctuation de l'app : « besoin 40 · valeur 30 », « site sans
+HTTPS · site non adapté au mobile ». Il est `aria-hidden` quand les éléments
+qu'il sépare sont déjà annoncés distinctement.
+
+Le `gap` reste — pour respirer, pas pour signifier.
+
+---
+
 ## Retour et repères
 
 Un lien de retour dit d'où l'on vient, jamais où l'on suppose que l'on est.
@@ -223,6 +240,40 @@ Dette connue — le palier supérieur (+25 %) les ferait passer à 45 px.
 
 ---
 
+## Thème
+
+Trois états, pas deux : **Système**, **Clair**, **Sombre**. « Système » doit
+rester atteignable — c'est le bon défaut pour qui bascule son ordinateur en
+sombre le soir — donc un interrupteur à deux positions ne suffit pas, et une
+icône qui tourne en rond oblige à cliquer pour découvrir ce qu'elle fait.
+Trois options nommées se lisent d'un coup.
+
+Le choix vit dans `localStorage`, pas en base : c'est une préférence
+d'appareil. Le contrôle est donc **hors du formulaire** des réglages, qui lui
+écrit en base — le glisser entre des champs qui attendent « Enregistrer »
+laisserait croire qu'il faut le valider aussi.
+
+Mécanique, dans l'ordre où elle s'exécute :
+
+1. un script en ligne dans `<head>` pose la classe **pendant l'analyse du
+   HTML**, avant toute peinture. Un `useEffect` s'exécuterait après le premier
+   affichage : on verrait le thème du système apparaître puis être corrigé ;
+2. `suppressHydrationWarning` sur `<html>`, sinon React voit l'écart entre ce
+   qu'il a rendu et ce qu'il trouve, le traite en erreur, et re-rend — en
+   effaçant la classe ;
+3. `ThemeSync` la repose en `useLayoutEffect`. En développement seulement : le
+   Strict Mode remonte les composants une fois et remet `<html>` aux seuls
+   attributs venus du JSX, ce qui efface la classe du script.
+
+`classList.add/remove` et jamais une réécriture de `className` : `<html>`
+porte aussi les variables de police posées par `next/font`.
+
+**Aucun utilitaire `dark:` dans l'app.** `@custom-variant dark` ne réagit qu'à
+la classe, donc un `dark:` quelconque serait muet en mode « Système ». Tout
+passe par les variables CSS, qui elles suivent les trois états.
+
+---
+
 ## Mouvement
 
 Sobre et fonctionnel. Les modales entrent en 180 ms, sortent en 120 ms : ce
@@ -256,6 +307,6 @@ nouvelle requête.
 | Cartes de groupement (`reglages`, fiche prospect) | à reprendre en mise en page |
 | ~~Hiérarchie de « À faire »~~ | réglé : compteurs en ligne, file repliée, retard en section |
 | Cibles tactiles de la barre de navigation | ~31 px à 112,5 %, cible 44 px |
-| Bascule de thème manuelle | le CSS gère `.light` / `.dark`, aucune commande ne les pose |
+| ~~Bascule de thème manuelle~~ | réglé : Réglages → Apparence, trois états |
 | Compte rendu d'import ligne à ligne | on annonce un nombre, pas un résultat |
 | Deux points de rupture seulement (`sm`, un peu `lg`) | rien n'adapte entre 640 et 1024 px |

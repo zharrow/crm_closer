@@ -168,12 +168,35 @@ function Counters({
   booked: number;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t pt-3 text-meta text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-3 text-meta text-muted-foreground">
       <Counter label="leads" value={total} href="/prospects" />
+      <Separator />
       <Counter label="ont répondu" value={engaged} href="/prospects?statut=engaged" />
+      <Separator />
       <Counter label="RDV" value={booked} href="/prospects?statut=booked" />
     </div>
   );
+}
+
+/**
+ * Le point médian n'est pas décoratif : il porte la séparation.
+ *
+ * La lisibilité de cette ligne ne tenait qu'au `gap` du conteneur. JSX ne
+ * laisse aucune espace entre deux éléments écrits sur des lignes séparées :
+ * que `display: flex` n'arrive pas — CSS pas encore chargé, feuille servie
+ * en retard, rechargement à chaud à mi-course — et les compteurs se collent
+ * en « 485 leads0 ont répondu0 RDV ». Un texte dont le sens dépend d'une
+ * propriété de mise en page se casse chaque fois que cette propriété manque.
+ *
+ * Le séparateur, lui, est dans le contenu : la ligne reste lisible même sans
+ * aucun style. Et c'est déjà la ponctuation de l'app — « besoin 40 · valeur
+ * 30 », « site sans HTTPS · site non adapté au mobile ».
+ *
+ * `aria-hidden` parce qu'il ne se lit pas : chaque compteur est déjà un lien
+ * distinct, annoncé séparément.
+ */
+function Separator() {
+  return <span aria-hidden>·</span>;
 }
 
 function Counter({ label, value, href }: { label: string; value: number; href: string }) {

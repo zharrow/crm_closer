@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeSync } from "@/components/theme-toggle";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 /**
@@ -47,8 +49,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={`${sans.variable} ${mono.variable}`}>
+    /* `suppressHydrationWarning` : le script ci-dessous ajoute une classe à
+       <html> avant que React n'hydrate. Sans ça, React verrait l'écart entre
+       ce qu'il a rendu et ce qu'il trouve, le signalerait comme une erreur,
+       et re-rendrait — en effaçant la classe au passage. */
+    <html lang="fr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Avant toute peinture : sinon on verrait le thème du système
+            s'afficher une fraction de seconde, puis être corrigé. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
+        <ThemeSync />
         {/* Le fournisseur couvre toute l'app, y compris la page de
             connexion et la page d'erreur : sans lui, une infobulle lève. */}
         <TooltipProvider delayDuration={200} skipDelayDuration={300}>
