@@ -11,7 +11,14 @@
      le caractère sans jamais entrer en concurrence avec le sens. La
      terracotta est réservée à l'action ; le vert dit « acquis », l'ocre
      « à surveiller », la brique « problème ». Trois registres qui ne se
-     marchent pas dessus. */
+     marchent pas dessus.
+
+     Les valeurs ont été assombries d'un cran pour viser AAA (7:1) plutôt
+     que AA : l'outil est destiné à une vue qui baisse, et le gris de
+     second plan — celui qui porte les trois quarts du texte — passait tout
+     juste. La teinte est conservée exactement : chaque canal est multiplié
+     par un même facteur, ce qui déplace la clarté sans toucher au ton.
+     `--warning` reste à 4,5:1, il ne sert qu'à des icônes. */
 
   --background: #F7F8F6;
   --foreground: #16211C;
@@ -19,43 +26,43 @@
   --card-foreground: #16211C;
   --popover: #FFFFFF;
   --popover-foreground: #16211C;
-  --primary: #B3542D;
+  --primary: #984826;
   --primary-foreground: #FFFFFF;
   --secondary: #EDF1EB;
   --secondary-foreground: #16211C;
   --muted: #EDF1EB;
-  --muted-foreground: #63705F;
+  --muted-foreground: #4E584B;
   --accent: #E7EDE5;
   --accent-foreground: #16211C;
-  --destructive: #A6342A;
+  --destructive: #993027;
   --destructive-foreground: #FFFFFF;
-  --success: #2E7D52;
-  --warning: #A2762A;
-  --border: #DFE5DE;
-  /* La bordure d'un champ est la seule chose qui dit « ici on écrit ». À
-     #DFE5DE elle ressortait à 1,28:1 sur la carte — sous les 3:1 que la
-     règle 1.4.11 demande pour la limite d'un composant. Le trait d'un
-     champ n'est donc pas le trait d'une carte : celui-ci sépare, celui-là
-     désigne. Vérifié à 3,32:1 sur la carte et 3,12:1 sur la page. */
-  --input: #878F89;
-  --ring: #B3542D;
+  --success: #23603F;
+  --warning: #936B26;
+  --border: #9FA39E;
+  /* Le trait d'un champ n'est pas celui d'une carte : celui-ci sépare,
+     celui-là désigne « ici on écrit ». La règle 1.4.11 demande 3:1 pour la
+     limite d'un composant ; on monte plus haut, et surtout on garde l'écart
+     entre les deux — 4,5:1 pour le champ contre 2,4:1 pour la carte, sinon
+     tout se vaut et plus rien ne hiérarchise. */
+  --input: #6D746F;
+  --ring: #984826;
 
   /* Le canal se reconnaît sans lire le mot. */
   --channel-email: #2F6E8F;
-  --channel-phone: #B3542D;
+  --channel-phone: #984826;
   --channel-linkedin: #5C4E8A;
 
   /* Les mêmes teintes, assombries pour être *lues* sur leur propre fond
-     pâle. Un badge, c'est du 12px sur un aplat à 15 % : la couleur qui
-     porte bien en pastille d'icône tombe à 3,2:1 en texte, sous le seuil
-     AA. Deux jetons plutôt qu'un, donc : l'un pour la teinte, l'autre
-     pour ce qui doit rester lisible. Vérifié sur les deux fonds que
-     porte un badge, la carte et la page : 4,8:1 au pire. */
-  --success-on-tint: #256845;
-  --warning-on-tint: #7A5718;
-  --channel-email-on-tint: #2C6684;
-  --channel-phone-on-tint: #9C4722;
-  --channel-linkedin-on-tint: #5C4E8A;
+     pâle. Un badge, c'est du petit texte sur un aplat à 15 % : la couleur
+     qui porte bien en pastille d'icône n'y tient pas en lecture. Deux
+     jetons plutôt qu'un, donc : l'un pour la teinte, l'autre pour ce qui
+     doit rester lisible. Vérifié sur les deux fonds que porte un badge, la
+     carte et la page : 7:1 au pire. */
+  --success-on-tint: #1C5035;
+  --warning-on-tint: #5B4112;
+  --channel-email-on-tint: #225067;
+  --channel-phone-on-tint: #743519;
+  --channel-linkedin-on-tint: #4E4275;
 }
 
 /* Le thème sombre était écrit depuis le début mais ne s'allumait jamais :
@@ -74,34 +81,35 @@
     --card-foreground: #E4EAE3;
     --popover: #16201B;
     --popover-foreground: #E4EAE3;
-    --primary: #DB8355;
+    --primary: #E1966F;
     --primary-foreground: #1B0E07;
     --secondary: #1B2620;
     --secondary-foreground: #E4EAE3;
     --muted: #1B2620;
-    --muted-foreground: #92A08E;
+    --muted-foreground: #A6B1A2;
     --accent: #1F2C25;
     --accent-foreground: #E4EAE3;
-    --destructive: #E0685A;
+    --destructive: #E89086;
     --destructive-foreground: #1B0E07;
-    --success: #58B27C;
-    --warning: #D3A455;
-    --border: #24312A;
+    --success: #71BE90;
+    --warning: #D4A659;
+    --border: #525C56;
     /* 3,47:1 sur la carte, 3,84:1 sur la page. */
-    --input: #69756C;
-    --ring: #DB8355;
+    --input: #7D877F;
+    --ring: #E1966F;
 
     --channel-email: #67A8C7;
-    --channel-phone: #DB8355;
+    --channel-phone: #E1966F;
     --channel-linkedin: #9A8AC9;
 
-    /* Sur fond sombre l'aplat descend au lieu de monter : la teinte
-       claire y passe déjà AA sans être retouchée. */
-    --success-on-tint: #58B27C;
-    --warning-on-tint: #D3A455;
-    --channel-email-on-tint: #67A8C7;
-    --channel-phone-on-tint: #DB8355;
-    --channel-linkedin-on-tint: #9A8AC9;
+    /* Sur fond sombre l'aplat descend au lieu de monter, ce qui suffisait
+       tant qu'on visait AA. Pour AAA il faut quand même éclaircir le texte
+       du badge : la teinte brute plafonnait à 4,6:1 sur son propre aplat. */
+    --success-on-tint: #94CEAC;
+    --warning-on-tint: #E4C796;
+    --channel-email-on-tint: #91C0D6;
+    --channel-phone-on-tint: #E9B397;
+    --channel-linkedin-on-tint: #BCB1DB;
   }
 }
 
@@ -114,31 +122,31 @@
   --card-foreground: #E4EAE3;
   --popover: #16201B;
   --popover-foreground: #E4EAE3;
-  --primary: #DB8355;
+  --primary: #E1966F;
   --primary-foreground: #1B0E07;
   --secondary: #1B2620;
   --secondary-foreground: #E4EAE3;
   --muted: #1B2620;
-  --muted-foreground: #92A08E;
+  --muted-foreground: #A6B1A2;
   --accent: #1F2C25;
   --accent-foreground: #E4EAE3;
-  --destructive: #E0685A;
+  --destructive: #E89086;
   --destructive-foreground: #1B0E07;
-  --success: #58B27C;
-  --warning: #D3A455;
-  --border: #24312A;
-  --input: #69756C;
-  --ring: #DB8355;
+  --success: #71BE90;
+  --warning: #D4A659;
+  --border: #525C56;
+  --input: #7D877F;
+  --ring: #E1966F;
 
   --channel-email: #67A8C7;
-  --channel-phone: #DB8355;
+  --channel-phone: #E1966F;
   --channel-linkedin: #9A8AC9;
 
-  --success-on-tint: #58B27C;
-  --warning-on-tint: #D3A455;
-  --channel-email-on-tint: #67A8C7;
-  --channel-phone-on-tint: #DB8355;
-  --channel-linkedin-on-tint: #9A8AC9;
+  --success-on-tint: #94CEAC;
+  --warning-on-tint: #E4C796;
+  --channel-email-on-tint: #91C0D6;
+  --channel-phone-on-tint: #E9B397;
+  --channel-linkedin-on-tint: #BCB1DB;
 }
 
 

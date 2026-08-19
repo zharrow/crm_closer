@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Ban, CalendarCheck, Play, RefreshCw, ThumbsDown, Trophy } from "lucide-react";
+import { Ban, CalendarCheck, Trophy } from "lucide-react";
+import { Play } from "@/components/animate-ui/icons/play";
+import { RefreshCw } from "@/components/animate-ui/icons/refresh-cw";
+import { ThumbsDown } from "@/components/animate-ui/icons/thumbs-down";
 import { ActionButton } from "@/components/action-button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,7 +44,7 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
         }}
         onClick={() => run(() => enrichLeadNow(leadId), "Enrichissement terminé")}
       >
-        <RefreshCw className="h-4 w-4" />
+        <RefreshCw size={16} animate={pending} loop={pending} animateOnHover={!pending} />
         Enrichir
       </ActionButton>
 
@@ -58,7 +61,7 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
           }}
           onClick={() => run(() => enrollLeadNow(leadId), "Inscrit — première action dans ta file")}
         >
-          <Play className="h-4 w-4" />
+          <Play size={16} animateOnHover />
           Inscrire en séquence
         </ActionButton>
       )}
@@ -145,7 +148,7 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
           }}
           onClick={() => run(() => markLost(leadId), "Marqué perdu")}
         >
-          <ThumbsDown className="h-4 w-4" />
+          <ThumbsDown size={16} animateOnHover />
           Perdu
         </ActionButton>
         <ActionButton

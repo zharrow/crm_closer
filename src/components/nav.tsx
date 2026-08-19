@@ -2,18 +2,32 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckSquare, Loader2, Users, Upload, Settings, LogOut } from "lucide-react";
+import { CheckSquare, Loader2 } from "lucide-react";
+import { Users } from "@/components/animate-ui/icons/users";
+import { Upload } from "@/components/animate-ui/icons/upload";
+import { Settings } from "@/components/animate-ui/icons/settings";
+import { LogOut } from "@/components/animate-ui/icons/log-out";
 import { cn } from "@/lib/utils";
 import { ActionButton } from "@/components/action-button";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
+/**
+ * Les icônes d'Animate UI s'animent au survol ; celles de Lucide sont
+ * immobiles. Le mélange est assumé : le registre n'a pas d'équivalent pour
+ * `CheckSquare`, et une icône figée vaut mieux qu'une icône approximative
+ * choisie pour la seule raison qu'elle bouge.
+ *
+ * Le survol, et pas autre chose : rien ne s'agite tant qu'on ne pointe pas.
+ * Sur un outil ouvert toute la journée, une animation qui se déclenche seule
+ * finit par fatiguer — et l'app se destine à quelqu'un qu'on veut ménager.
+ */
 const LINKS = [
-  { href: "/", label: "À faire", icon: CheckSquare },
-  { href: "/prospects", label: "Prospects", icon: Users },
-  { href: "/import", label: "Import", icon: Upload },
-  { href: "/reglages", label: "Réglages", icon: Settings },
-];
+  { href: "/", label: "À faire", icon: CheckSquare, animated: false },
+  { href: "/prospects", label: "Prospects", icon: Users, animated: true },
+  { href: "/import", label: "Import", icon: Upload, animated: true },
+  { href: "/reglages", label: "Réglages", icon: Settings, animated: true },
+] as const;
 
 /**
  * L'icône devient une roue pendant la navigation.
@@ -24,13 +38,36 @@ const LINKS = [
  * deuxième fois en croyant avoir raté le lien. Le remplacement se fait à
  * dimensions égales, 16 × 16 dans les deux cas : rien ne bouge autour.
  */
-function NavIcon({ icon: Icon }: { icon: typeof CheckSquare }) {
+function NavIcon({
+  icon: Icon,
+  animated,
+  active,
+}: {
+  icon: (typeof LINKS)[number]["icon"];
+  animated: boolean;
+  active: boolean;
+}) {
   const { pending } = useLinkStatus();
-  return pending ? (
-    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-  ) : (
-    <Icon className="h-4 w-4" aria-hidden />
-  );
+
+  if (pending) return <Loader2 className="h-4 w-4 animate-spin" aria-hidden />;
+
+  // Les deux familles n'ont pas la même signature : Animate UI prend une
+  // taille en nombre, Lucide s'habille en classes utilitaires.
+  if (animated) {
+    const Animated = Icon as (typeof LINKS)[2]["icon"];
+    return (
+      <Animated
+        size={16}
+        animateOnHover
+        /* La page courante s'anime aussi au survol : son icône n'est pas
+           décorative sous prétexte qu'on y est déjà. */
+        aria-hidden
+      />
+    );
+  }
+
+  const Static = Icon as typeof CheckSquare;
+  return <Static className="h-4 w-4" aria-hidden />;
 }
 
 export function Nav({ pendingCount }: { pendingCount: number }) {
@@ -51,7 +88,7 @@ export function Nav({ pendingCount }: { pendingCount: number }) {
         </span>
 
         <nav aria-label="Navigation principale" className="flex flex-1 items-center gap-1">
-          {LINKS.map(({ href, label, icon: Icon }) => {
+          {LINKS.map(({ href, label, icon: Icon, animated }) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link
@@ -65,7 +102,7 @@ export function Nav({ pendingCount }: { pendingCount: number }) {
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >
-                <NavIcon icon={Icon} />
+                <NavIcon icon={Icon} animated={animated} active={active} />
                 {/* Sous `sm` le libellé disparaît à l'œil mais reste dans
                     l'arbre d'accessibilité : un lien qui ne serait qu'une
                     icône n'a plus de nom à annoncer. */}
@@ -91,7 +128,7 @@ export function Nav({ pendingCount }: { pendingCount: number }) {
           aria-label="Se déconnecter"
           tooltip="Ferme ta session et te renvoie à l'écran de connexion."
         >
-          <LogOut className="h-4 w-4" aria-hidden />
+          <LogOut size={16} animateOnHover aria-hidden />
         </ActionButton>
       </div>
     </header>

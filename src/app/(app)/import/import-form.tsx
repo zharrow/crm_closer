@@ -4,7 +4,8 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Papa from "papaparse";
 import { toast } from "sonner";
-import { FileUp, Upload } from "lucide-react";
+import { FileUp } from "lucide-react";
+import { Upload } from "@/components/animate-ui/icons/upload";
 import { ActionButton } from "@/components/action-button";
 import { Card, CardContent } from "@/components/ui/card";
 import { importLeads, type ImportRow } from "./actions";
@@ -175,7 +176,7 @@ export function ImportForm() {
               disabled={pending}
               tooltip="Crée les prospects du fichier. Les doublons et les lignes sans nom d'entreprise sont ignorés."
             >
-              <Upload className="h-4 w-4" />
+              <Upload size={16} animate={pending} loop={pending} animateOnHover={!pending} />
               {pending ? "Import…" : `Importer ${rows.length} prospects`}
             </ActionButton>
             <ActionButton

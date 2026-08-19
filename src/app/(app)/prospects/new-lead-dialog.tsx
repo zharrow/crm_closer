@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/animate-ui/icons/plus";
 import { ActionButton } from "@/components/action-button";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -70,7 +70,7 @@ export function NewLeadDialog() {
         <TooltipTrigger asChild>
           <DialogTrigger asChild>
             <Button size="sm">
-              <Plus className="h-4 w-4" />
+              <Plus size={16} animateOnHover />
               Ajouter
             </Button>
           </DialogTrigger>

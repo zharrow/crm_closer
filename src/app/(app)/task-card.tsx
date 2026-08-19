@@ -1,21 +1,25 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import {
-  AlertTriangle,
-  Check,
-  ChevronDown,
-  Clock,
-  Copy,
-  ExternalLink,
-  Link2,
-  Mail,
-  Phone,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { AlertTriangle, ExternalLink as ExternalLinkStatic, Info } from "lucide-react";
+/* Animate UI là où le registre a l'icône, Lucide ailleurs. Le mélange est
+   assumé : une icône figée vaut mieux qu'une icône approximative choisie
+   pour la seule raison qu'elle bouge. */
+import { Check } from "@/components/animate-ui/icons/check";
+import { ChevronDown } from "@/components/animate-ui/icons/chevron-down";
+import { Clock } from "@/components/animate-ui/icons/clock";
+import { Copy } from "@/components/animate-ui/icons/copy";
+import { Sparkles } from "@/components/animate-ui/icons/sparkles";
+import { X } from "@/components/animate-ui/icons/x";
+/* Les quatre canaux, tous animés : le canal se reconnaît d'abord à sa forme,
+   autant que cette forme réagisse. `Mail` est écrite à la main — le registre
+   Animate UI n'a aucune icône d'email. */
+import { Mail } from "@/components/animate-ui/icons/mail";
+import { PhoneCall } from "@/components/animate-ui/icons/phone-call";
+import { Link2 } from "@/components/animate-ui/icons/link-2";
+import { ExternalLink } from "@/components/animate-ui/icons/external-link";
 import { ActionButton } from "@/components/action-button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge, badgeVariants } from "@/components/ui/badge";
@@ -23,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { channelTone, cn, relativeDay, scoreTone } from "@/lib/utils";
+import { readTaskError } from "@/lib/task-error";
 import { draftTaskNow, markTaskDone, saveTaskDraft, skipTask, snoozeTask } from "./actions";
 
 export interface TaskCardData {
@@ -48,7 +53,7 @@ export interface TaskCardData {
 const CHANNEL_META: Record<string, { label: string; icon: typeof Mail }> = {
   email: { label: "Email", icon: Mail },
   linkedin: { label: "LinkedIn", icon: Link2 },
-  phone: { label: "Téléphone", icon: Phone },
+  phone: { label: "Téléphone", icon: PhoneCall },
   contact_form: { label: "Formulaire", icon: ExternalLink },
 };
 
@@ -61,6 +66,77 @@ const CHANNEL_META: Record<string, { label: string; icon: typeof Mail }> = {
  * emporterait `subject` et `body` avec lui. Le repli est donc un geste
  * d'affichage, jamais une perte.
  */
+/**
+ * Ce que la dernière rédaction a laissé derrière elle.
+ *
+ * Le texte brut de `tasks.error` s'affichait tel quel dans un encadré ocre :
+ * un JSON d'API entier passait donc dans la carte, et « NEXT_PUBLIC_APP_URL
+ * manquant » se lisait comme un diagnostic du moment alors que c'était le
+ * souvenir d'un échec parfois vieux de plusieurs jours.
+ *
+ * Faute de colonne `error_at`, on ne peut pas dater l'échec — on le met donc
+ * au passé dans le titre, ce qui suffit à ne plus le confondre avec un
+ * contrôle en direct.
+ */
+function TaskNotice({ raw, hasDraft }: { raw: string; hasDraft: boolean }) {
+  const notice = readTaskError(raw);
+
+  if (notice.kind === "etat") {
+    return (
+      <p className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-meta leading-relaxed">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        {notice.title}
+      </p>
+    );
+  }
+
+  if (notice.kind === "avertissement") {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-meta leading-relaxed">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+        <p>
+          <span className="font-medium">{notice.title}</span>
+          {notice.detail && <> — {notice.detail}</>}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-meta leading-relaxed">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
+      <div className="min-w-0 flex-1">
+        {/* Au passé, explicitement : ce n'est pas un contrôle en direct. */}
+        <p>
+          <span className="font-medium">Dernière rédaction : {notice.title.toLowerCase()}</span>
+        </p>
+        <p className="mt-1 text-muted-foreground">{notice.hint}</p>
+        {/* Un échec n'efface pas le brouillon précédent : le dire, sinon
+            l'encadré semble contredire le texte parfaitement lisible qui
+            s'affiche juste en dessous. */}
+        {hasDraft && (
+          <p className="mt-1 text-muted-foreground">
+            Le message ci-dessous vient d&apos;une rédaction antérieure, qui avait
+            abouti. Il reste modifiable et copiable.
+          </p>
+        )}
+        {notice.raw && (
+          /* Le détail technique se range, comme dans `(app)/error.tsx` : il
+             sert quand on cherche, il encombre le reste du temps. */
+          <details className="mt-2">
+            <summary className="cursor-pointer text-muted-foreground">
+              Détail technique
+            </summary>
+            <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all text-muted-foreground">
+              {notice.raw}
+            </pre>
+          </details>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function TaskCard({
   task,
   late,
@@ -80,6 +156,31 @@ export function TaskCard({
   const meta = CHANNEL_META[task.channel] ?? CHANNEL_META.email;
   const Icon = meta.icon;
   const dirty = body !== (task.body ?? "") || subject !== (task.subject ?? "");
+
+  /**
+   * Le lien de désinscription pointe-t-il encore vers cette app ?
+   *
+   * Le corps est figé au moment de la rédaction : un brouillon écrit en
+   * local porte un lien en `localhost`, qui ne mène nulle part pour son
+   * destinataire. Or ce lien est obligatoire en prospection, et c'est
+   * précisément le genre de détail qu'on ne relit pas — il est en pied de
+   * message, toujours au même endroit, on cesse de le voir.
+   *
+   * On compare donc les origines, pas les chaînes : seul l'hôte compte, le
+   * jeton qui suit est propre à chaque prospect.
+   */
+  const staleUnsubscribe = useMemo(() => {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl || !body) return null;
+    const found = body.match(/https?:\/\/\S+?\/u\/\S+/);
+    if (!found) return null;
+    try {
+      const linkOrigin = new URL(found[0]).origin;
+      return linkOrigin === new URL(appUrl).origin ? null : linkOrigin;
+    } catch {
+      return null;
+    }
+  }, [body]);
 
   const copy = async () => {
     const text = task.channel === "email" && subject ? `${subject}\n\n${body}` : body;
@@ -133,7 +234,7 @@ export function TaskCard({
           className="flex w-full flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-left transition-colors hover:bg-accent/40"
         >
           <span className={cn(badgeVariants({ variant: channelTone(task.channel) }), "gap-1")}>
-            <Icon className="h-3 w-3" />
+            <Icon size={13} animateOnHover />
             <span className="sr-only sm:not-sr-only">{meta.label}</span>
           </span>
           <span className="font-semibold">{task.companyName}</span>
@@ -158,7 +259,7 @@ export function TaskCard({
           >
             {relativeDay(task.dueAt)}
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          <ChevronDown size={16} className="shrink-0 text-muted-foreground" aria-hidden />
         </button>
       </Card>
     );
@@ -169,7 +270,7 @@ export function TaskCard({
       <CardHeader className="gap-3 pb-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={channelTone(task.channel)} className="gap-1">
-            <Icon className="h-3 w-3" />
+            <Icon size={13} animateOnHover />
             {meta.label}
           </Badge>
           {task.stepPosition && (
@@ -199,7 +300,7 @@ export function TaskCard({
             aria-controls={panelId}
             className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
           >
-            <ChevronDown className="h-4 w-4 rotate-180" aria-hidden />
+            <ChevronDown size={16} className="rotate-180" aria-hidden />
             <span className="sr-only">Replier l&apos;action pour {task.companyName}</span>
           </button>
         </div>
@@ -215,7 +316,7 @@ export function TaskCard({
               rel="noreferrer"
               className="inline-flex items-center gap-1 underline underline-offset-2"
             >
-              Profil <ExternalLink className="h-3 w-3" />
+              Profil <ExternalLinkStatic className="h-3 w-3" />
             </a>
           )}
           {task.website && (
@@ -225,7 +326,7 @@ export function TaskCard({
               rel="noreferrer"
               className="inline-flex items-center gap-1 underline underline-offset-2"
             >
-              Site <ExternalLink className="h-3 w-3" />
+              Site <ExternalLinkStatic className="h-3 w-3" />
             </a>
           )}
         </div>
@@ -236,12 +337,21 @@ export function TaskCard({
       </CardHeader>
 
       <CardContent id={panelId} className="flex flex-col gap-4">
-        {task.error && (
-          <p className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs leading-relaxed">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
-            {task.error}
+        {staleUnsubscribe && (
+          <p className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-meta leading-relaxed">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+            <span>
+              <span className="font-medium">
+                N&apos;envoie pas ce message tel quel.
+              </span>{" "}
+              Son lien de désinscription pointe vers {staleUnsubscribe}, pas vers
+              l&apos;adresse actuelle de l&apos;app : le destinataire ne pourrait pas
+              s&apos;y opposer. Régénère le message avant de l&apos;envoyer.
+            </span>
           </p>
         )}
+
+        {task.error && <TaskNotice raw={task.error} hasDraft={Boolean(task.body)} />}
 
         {task.status === "pending" || !task.body ? (
           <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-6">
@@ -260,7 +370,7 @@ export function TaskCard({
                 action: "Rédiger",
               }}
             >
-              <Sparkles className="h-4 w-4" />
+              <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
               {pending ? "Rédaction…" : "Rédiger le message"}
             </ActionButton>
           </div>
@@ -301,7 +411,7 @@ export function TaskCard({
                 size="sm"
                 tooltip="Copie le message dans le presse-papier. Rien n'est envoyé ni modifié."
               >
-                <Copy className="h-4 w-4" />
+                <Copy size={16} animateOnHover />
                 Copier
               </ActionButton>
               <ActionButton
@@ -316,7 +426,7 @@ export function TaskCard({
                   action: "J'ai envoyé, marquer fait",
                 }}
               >
-                <Check className="h-4 w-4" />
+                <Check size={16} animateOnHover />
                 Marquer envoyé
               </ActionButton>
               {dirty && (
@@ -343,7 +453,7 @@ export function TaskCard({
                   action: "Régénérer",
                 }}
               >
-                <Sparkles className="h-4 w-4" />
+                <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
                 Régénérer
               </ActionButton>
 
@@ -361,7 +471,7 @@ export function TaskCard({
                     action: "Reporter",
                   }}
                 >
-                  <Clock className="h-4 w-4" />
+                  <Clock size={16} animateOnHover />
                   +3 j
                 </ActionButton>
                 <ActionButton
@@ -379,7 +489,7 @@ export function TaskCard({
                     destructive: true,
                   }}
                 >
-                  <X className="h-4 w-4" aria-hidden />
+                  <X size={16} animateOnHover aria-hidden />
                 </ActionButton>
               </div>
             </div>

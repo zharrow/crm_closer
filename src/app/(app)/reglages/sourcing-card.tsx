@@ -3,17 +3,13 @@
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  Check,
-  Circle,
-  Loader2,
-  Play,
-  Plus,
-  RotateCcw,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { AlertTriangle, Circle, Loader2 } from "lucide-react";
+import { Check } from "@/components/animate-ui/icons/check";
+import { Play } from "@/components/animate-ui/icons/play";
+import { Plus } from "@/components/animate-ui/icons/plus";
+import { RotateCcw } from "@/components/animate-ui/icons/rotate-ccw";
+import { Sparkles } from "@/components/animate-ui/icons/sparkles";
+import { X } from "@/components/animate-ui/icons/x";
 import { ActionButton } from "@/components/action-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -333,7 +329,7 @@ export function SourcingCard({
                         tooltip={`Retirer « ${query} ». Les leads déjà sourcés par cette requête sont conservés.`}
                         onClick={() => setQueries((prev) => prev.filter((q) => q !== query))}
                       >
-                        <X aria-hidden />
+                        <X size={12} animateOnHover aria-hidden />
                       </ActionButton>
                     </li>
                   );
@@ -364,7 +360,7 @@ export function SourcingCard({
                   setDraft("");
                 }}
               >
-                <Plus className="h-4 w-4" />
+                <Plus size={16} animateOnHover />
                 Ajouter
               </ActionButton>
             </div>
@@ -519,7 +515,7 @@ export function SourcingCard({
                 action: "Demander",
               }}
             >
-              <Sparkles className="h-4 w-4" />
+              <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
               {pending ? "Recherche…" : "Proposer des requêtes"}
             </ActionButton>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
@@ -551,7 +547,7 @@ export function SourcingCard({
                       onClick={() => accept(suggestion)}
                       tooltip="Ajoute cette requête à la liste ci-dessus. Pense à enregistrer ensuite."
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus size={16} animateOnHover />
                       Ajouter
                     </ActionButton>
                     <ActionButton
@@ -563,7 +559,7 @@ export function SourcingCard({
                       onClick={() => dismiss(suggestion)}
                       tooltip="Écarte cette requête. Le modèle ne la reproposera plus."
                     >
-                      <X className="h-4 w-4" aria-hidden />
+                      <X size={16} animateOnHover aria-hidden />
                     </ActionButton>
                   </div>
                 </li>
@@ -599,7 +595,7 @@ export function SourcingCard({
                         onClick={() => restore(suggestion)}
                         tooltip="Remet cette requête dans les propositions."
                       >
-                        <RotateCcw className="h-4 w-4" aria-hidden />
+                        <RotateCcw size={16} animateOnHover aria-hidden />
                       </ActionButton>
                     </li>
                   ))}
@@ -633,7 +629,7 @@ export function SourcingCard({
                 action: "Lancer le cycle",
               }}
             >
-              {cycling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {cycling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play size={16} animateOnHover />}
               {cycling ? "Cycle en cours…" : "Lancer le cycle maintenant"}
             </ActionButton>
           </div>
@@ -659,7 +655,7 @@ export function SourcingCard({
                       {step.status === "running" ? (
                         <Loader2 className="h-4 w-4 animate-spin text-primary" aria-hidden />
                       ) : step.status === "done" ? (
-                        <Check className="h-4 w-4 text-success" aria-hidden />
+                        <Check size={16} className="text-success" animate aria-hidden />
                       ) : step.status === "error" ? (
                         <AlertTriangle className="h-4 w-4 text-destructive" aria-hidden />
                       ) : (

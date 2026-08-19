@@ -3,8 +3,20 @@ import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * `[&_svg]:pointer-events-none` a été retiré volontairement.
+ *
+ * C'est un héritage de shadcn : il rendait le SVG transparent au pointeur
+ * pour qu'il ne devienne jamais la cible d'un clic. Le clic fonctionne de
+ * toute façon — il remonte au bouton — mais les icônes animées, elles,
+ * reçoivent leurs gestionnaires de survol *sur le SVG lui-même*. Avec
+ * `pointer-events: none`, `onMouseEnter` ne se déclenchait jamais et aucune
+ * icône ne s'animait dans un bouton.
+ *
+ * Ne pas le remettre sans vérifier le survol des icônes.
+ */
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px",
+  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px",
   {
     variants: {
       variant: {

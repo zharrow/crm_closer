@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search } from "@/components/animate-ui/icons/search";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import type { BadgeProps } from "@/components/ui/badge";
@@ -59,7 +59,8 @@ export function StatusFilter({ current, query }: { current: string; query: strin
           Rechercher un prospect par entreprise, ville ou email
         </label>
         <Search
-          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+          size={16}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
           aria-hidden
         />
         <Input

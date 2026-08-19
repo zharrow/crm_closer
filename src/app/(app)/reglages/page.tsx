@@ -103,6 +103,13 @@ export default async function SettingsPage() {
               ok={Boolean(process.env.UNSUBSCRIBE_SECRET)}
               hint="Signe les liens d'opposition. Obligatoire pour l'envoi d'emails."
             />
+            {/* Absente, la rédaction d'un email échoue avant même d'appeler le
+                modèle : le lien de désinscription ne peut pas être fabriqué. */}
+            <Check
+              label="Adresse publique de l'app"
+              ok={Boolean(process.env.NEXT_PUBLIC_APP_URL)}
+              hint="NEXT_PUBLIC_APP_URL. Sert à fabriquer le lien de désinscription. Sans elle, aucun email ne peut être rédigé — et un brouillon écrit ailleurs garde l'adresse de là-bas."
+            />
           </ul>
         </CardContent>
       </Card>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Monitor } from "lucide-react";
+import { Moon } from "@/components/animate-ui/icons/moon";
+import { Sun } from "@/components/animate-ui/icons/sun";
 import { cn } from "@/lib/utils";
 import { applyTheme, readTheme, THEME_KEY, THEMES, type Theme } from "@/lib/theme";
 
@@ -24,7 +26,8 @@ export function ThemeSync() {
   return null;
 }
 
-const ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
+/* `Monitor` reste Lucide : le registre Animate UI n'a pas d'équivalent. */
+const ICONS = { light: Sun, dark: Moon } as const;
 
 /**
  * Le choix du thème : trois options nommées, pas un bouton qui bascule.
@@ -73,7 +76,6 @@ export function ThemeToggle() {
       className="flex flex-wrap gap-2"
     >
       {THEMES.map(({ value, label, hint }) => {
-        const Icon = ICONS[value];
         const active = theme === value;
         return (
           <button
@@ -89,7 +91,14 @@ export function ThemeToggle() {
                 : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >
-            <Icon className="h-4 w-4" aria-hidden />
+            {value === "system" ? (
+              <Monitor className="h-4 w-4" aria-hidden />
+            ) : (
+              (() => {
+                const Icon = ICONS[value];
+                return <Icon size={16} animateOnHover aria-hidden />;
+              })()
+            )}
             {label}
           </button>
         );

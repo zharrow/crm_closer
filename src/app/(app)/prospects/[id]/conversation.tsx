@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Copy, Send, Sparkles } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { Copy } from "@/components/animate-ui/icons/copy";
+import { Send } from "@/components/animate-ui/icons/send";
+import { Sparkles } from "@/components/animate-ui/icons/sparkles";
 import { ActionButton } from "@/components/action-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -134,7 +137,7 @@ export function Conversation({
                 action: "Proposer une réponse",
               }}
             >
-              <Sparkles className="h-4 w-4" />
+              <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
               {pending ? "Réflexion…" : "Proposer une réponse"}
             </ActionButton>
           </div>
@@ -172,7 +175,7 @@ export function Conversation({
                 onClick={copyDraft}
                 tooltip="Copie le brouillon dans le presse-papier. Rien n'est envoyé ni enregistré."
               >
-                <Copy className="h-4 w-4" />
+                <Copy size={16} animateOnHover />
                 Copier
               </ActionButton>
               <ActionButton
@@ -187,7 +190,7 @@ export function Conversation({
                   action: "J'ai envoyé, archiver",
                 }}
               >
-                <Send className="h-4 w-4" />
+                <Send size={16} animateOnHover />
                 Je l&apos;ai envoyé
               </ActionButton>
             </div>

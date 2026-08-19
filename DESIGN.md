@@ -48,16 +48,32 @@ Tout nouveau badge teinté doit venir avec son jeton `-on-tint`, mesuré.
 
 ### Les planchers, non négociables
 
-| Élément | Seuil | Règle |
-|---|---|---|
-| Texte courant | 4,5:1 | WCAG 1.4.3 |
-| Bordure d'un champ (`--input`) | **3:1** | WCAG 1.4.11 — c'est le seul indice qu'on peut écrire là |
-| Icône porteuse de sens | 3:1 | WCAG 1.4.11 |
-| Bordure décorative (`--border`) | libre | elle sépare, elle ne désigne pas |
+L'outil est destiné à une vue qui baisse : la cible est **AAA (7:1)**, pas AA.
 
-`--input` et `--border` ont volontairement des valeurs différentes. Le trait
-d'une carte sépare ; celui d'un champ désigne un composant. Les confondre est
-ce qui avait mis les champs à 1,28:1.
+| Élément | Seuil visé | Mesuré (pire des deux fonds) |
+|---|---|---|
+| Texte principal | 7:1 | 15,5 clair · 13,7 sombre |
+| Texte de second plan (`--muted-foreground`) | 7:1 | **7,0** clair · 7,5 sombre |
+| Texte d'un badge (`-on-tint`) | 7:1 | **7,0** au pire, les deux thèmes |
+| `--success`, `--destructive` | 7:1 | 7,0 · 7,0 |
+| `--primary` en texte | 6:1 | 6,0 clair · 7,0 sombre |
+| Blanc sur `--primary` | 6:1 | 6,4 clair · 7,9 sombre |
+| `--warning` | 3:1 | 4,5 — **icônes uniquement**, jamais du texte |
+| Bordure d'un champ (`--input`) | 4,5:1 | 4,5 — au-delà des 3:1 de la règle 1.4.11 |
+| Bordure de carte (`--border`) | ~2,4:1 | 2,4 — elle sépare, elle ne désigne pas |
+
+`--input` et `--border` gardent délibérément un écart : le trait d'une carte
+sépare, celui d'un champ désigne un composant. Les aligner ferait tout se
+valoir, et plus rien ne hiérarchiserait.
+
+**La teinte est conservée exactement.** Chaque canal est multiplié par un même
+facteur, ce qui déplace la clarté sans toucher au ton : la forêt reste la
+forêt, la terracotta reste la terracotta. Toute nouvelle couleur se résout de
+la même façon — on vise le ratio, on ne choisit pas un hex à l'œil.
+
+Le script de vérification vit dans le scratchpad de la session ; le refaire
+tient en vingt lignes. Une valeur de contraste écrite dans un commentaire sans
+avoir été mesurée est pire que pas de valeur du tout.
 
 ---
 
@@ -179,6 +195,56 @@ marqué.
 
 ---
 
+## Un brouillon est daté, même s'il ne le dit pas
+
+Le corps d'un message est figé au moment de sa rédaction, avec la
+configuration de ce moment-là. Un brouillon écrit en local porte donc un lien
+de désinscription en `localhost` — inutilisable pour son destinataire, alors
+que ce lien est obligatoire en prospection.
+
+C'est exactement le genre de détail qu'on ne relit pas : il est en pied de
+message, toujours au même endroit, et on cesse de le voir. La carte compare
+donc l'**origine** du lien à celle de l'app (le jeton qui suit est propre à
+chaque prospect, seul l'hôte compte) et refuse de laisser partir un message
+dont le lien pointe ailleurs.
+
+C'est le seul avertissement de la file en rouge et non en ocre : envoyer un
+message dont le destinataire ne peut pas se désinscrire n'est pas un défaut de
+qualité, c'est un problème.
+
+Limite connue : la comparaison utilise `NEXT_PUBLIC_APP_URL` telle qu'inscrite
+dans le bundle au moment du build. Si la variable manque, il n'y a rien à
+comparer et aucune alerte ne se déclenche — d'où sa présence dans la liste
+« Services connectés » des réglages.
+
+---
+
+## Une erreur stockée n'est pas un diagnostic
+
+`tasks.error` garde ce qui s'est passé à la dernière rédaction, parfois il y a
+plusieurs jours. Affichée telle quelle, elle se lit comme un constat du
+moment : on corrige la cause, on recharge, le message reste, et on cherche un
+problème qui n'existe plus. Un état passé s'écrit donc **au passé** —
+« Dernière rédaction : … ».
+
+La même colonne porte trois registres, qui n'appellent pas le même geste et ne
+doivent pas partager le même encadré :
+
+| Registre | Exemple | Rendu |
+|---|---|---|
+| avertissement | « À relire : montant chiffré » | ocre — le brouillon est là, il mérite un œil |
+| état | « lead en liste d'exclusion » | neutre — ce n'est pas une panne |
+| échec | crédit épuisé, variable absente | ocre, au passé, avec le geste à faire |
+
+**Aucune erreur brute ne s'affiche.** Un JSON d'API entier passait dans la
+carte. `(app)/error.tsx` avait déjà tranché la question pour les pannes de
+page — nommer la cause probable et le geste, ranger le détail technique sous
+un `details` — et `lib/task-error.ts` applique la même règle à la file. Le
+défaut, quand rien ne correspond, reste utilisable : un titre honnête et le
+brut replié.
+
+---
+
 ## Le sens ne se délègue pas à la mise en page
 
 Une ligne de texte doit rester lisible sans son CSS. JSX ne laisse aucune
@@ -280,8 +346,43 @@ Sobre et fonctionnel. Les modales entrent en 180 ms, sortent en 120 ms : ce
 qui s'en va n'a pas à se faire attendre. L'icône de navigation devient une
 roue pendant le chargement, à dimensions égales — rien ne bouge autour.
 
-Pas d'animation décorative. Une animation qui n'aide pas à comprendre où l'on
-est n'a rien à faire ici.
+### Les icônes animées
+
+19 icônes viennent du registre **Animate UI** (`src/components/animate-ui/`),
+posées dans le dépôt et non tirées d'une dépendance : on peut les lire et les
+modifier. Elles s'appuient sur `motion`, et sur Lucide — donc raccord avec le
+jeu d'icônes existant.
+
+Deux déclenchements, et deux seulement :
+
+| Déclenchement | Pour | Exemple |
+|---|---|---|
+| `animateOnHover` | ce qu'on pointe | copier, navigation, ajouter |
+| `animate` + `loop` | ce qui travaille | l'étincelle pendant que le modèle rédige |
+
+**Rien ne s'anime tout seul.** Sur un outil ouvert toute la journée, une
+animation qui se déclenche sans qu'on la demande finit par fatiguer, et
+l'app se destine à quelqu'un qu'on veut ménager. Le survol suppose une
+intention ; la boucle rend compte d'une attente réelle.
+
+Le mélange Animate UI / Lucide est assumé : le registre n'a pas tout
+(`CheckSquare`, `Ban`, `Trophy`, `Monitor`, `Inbox`…). Une icône figée vaut
+mieux qu'une icône approximative choisie pour la seule raison qu'elle bouge.
+
+### Modification locale d'Animate UI, à ne pas perdre
+
+`icons/icon.tsx` a été patché pour respecter `prefers-reduced-motion` — le
+registre ne le fait pas. La règle CSS de `globals.css` ne pouvait rien pour
+lui : Motion anime en JavaScript, via la Web Animations API, hors de portée
+d'un `animation-duration`. Sans ce garde-fou, activer ces icônes cassait en
+silence une garantie que l'app tenait depuis le début.
+
+Tout passe par `startAnimation`, donc un seul point d'arrêt suffit. **À
+reporter à chaque mise à jour des composants Animate UI**, faute de quoi la
+régression revient sans bruit.
+
+Pas d'animation décorative pour autant. Une animation qui n'aide pas à
+comprendre où l'on est n'a rien à faire ici.
 
 ---
 
@@ -309,4 +410,5 @@ nouvelle requête.
 | Cibles tactiles de la barre de navigation | ~31 px à 112,5 %, cible 44 px |
 | ~~Bascule de thème manuelle~~ | réglé : Réglages → Apparence, trois états |
 | Compte rendu d'import ligne à ligne | on annonce un nombre, pas un résultat |
+| Pas de colonne `error_at` sur `tasks` | on sait *que* la rédaction a échoué, jamais *quand* |
 | Deux points de rupture seulement (`sm`, un peu `lg`) | rien n'adapte entre 640 et 1024 px |
