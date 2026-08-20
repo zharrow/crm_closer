@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScoreBadge } from "@/components/score-badge";
 import { formatDate } from "@/lib/utils";
 import { NewLeadDialog } from "./new-lead-dialog";
-import { StatusFilter, STATUS_LABEL, STATUS_VARIANT } from "./filters";
+import { STATUS_LABEL, STATUS_VARIANT } from "@/lib/lead-status";
+import { StatusFilter } from "./filters";
 
 export const dynamic = "force-dynamic";
 
@@ -59,8 +60,8 @@ export default async function ProspectsPage({
       <ScrollMemory />
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Prospects</h1>
-          <p className="mt-1.5 text-muted-foreground">
+          <h1 className="display text-display">Prospects</h1>
+          <p className="mt-3 text-body text-muted-foreground">
             {rows.length} affiché{rows.length > 1 ? "s" : ""}
             {rows.length === 200 && " (200 maximum)"}
           </p>
@@ -105,15 +106,15 @@ export default async function ProspectsPage({
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-xl border">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+        <div className="overflow-hidden rounded-panel bg-card shadow-raised dark:border">
+          <table className="w-full text-dense">
+            <thead className="border-b bg-muted text-left text-muted-foreground">
               <tr>
-                <th scope="col" className="px-4 py-3 font-medium">Entreprise</th>
-                <th scope="col" className="hidden px-4 py-3 font-medium sm:table-cell">Ville</th>
-                <th scope="col" className="px-4 py-3 font-medium">Statut</th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">Score</th>
-                <th scope="col" className="hidden px-4 py-3 text-right font-medium md:table-cell">
+                <th scope="col" className="eyebrow px-4 py-3">Entreprise</th>
+                <th scope="col" className="eyebrow hidden px-4 py-3 sm:table-cell">Ville</th>
+                <th scope="col" className="eyebrow px-4 py-3">Statut</th>
+                <th scope="col" className="eyebrow px-4 py-3 text-right">Score</th>
+                <th scope="col" className="eyebrow hidden px-4 py-3 text-right md:table-cell">
                   Mise à jour
                 </th>
               </tr>
@@ -140,14 +141,14 @@ export default async function ProspectsPage({
                       {STATUS_LABEL[lead.status] ?? lead.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="numeric px-4 py-3 text-right">
                     {lead.score === null ? (
                       "—"
                     ) : (
                       <ScoreBadge score={lead.score} rationale={lead.scoreRationale} />
                     )}
                   </td>
-                  <td className="hidden px-4 py-3 text-right text-muted-foreground md:table-cell">
+                  <td className="numeric hidden px-4 py-3 text-right text-muted-foreground md:table-cell">
                     {formatDate(lead.updatedAt)}
                   </td>
                 </tr>

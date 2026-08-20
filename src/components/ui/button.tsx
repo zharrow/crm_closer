@@ -15,23 +15,51 @@ import { cn } from "@/lib/utils";
  *
  * Ne pas le remettre sans vérifier le survol des icônes.
  */
+
+/**
+ * Le bouton est une pilule, et c'est une décision de fond.
+ *
+ * Un rayon de 6 px sur un bouton de 45 px de haut donne un rectangle aux
+ * angles cassés : la forme ne dit rien, elle se contente de ne pas être
+ * carrée. La pilule, elle, se reconnaît de loin et à la périphérie du
+ * regard — c'est la seule forme de l'interface qui signifie « on appuie
+ * ici ». Les panneaux gardent le grand rayon, les champs le moyen : trois
+ * géométries, trois natures d'objet, aucune ambiguïté.
+ *
+ * La hauteur par défaut passe de `h-9` à `h-10`. À la racine de 112,5 %
+ * cela fait **45 px** — au-dessus des 44 px que réclame une cible tactile,
+ * seuil que l'app n'atteignait nulle part et qui traînait en dette depuis
+ * le début.
+ */
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px",
+  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full font-medium transition-[background-color,color,box-shadow,filter,transform] disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0 active:translate-y-px",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        /* L'action principale porte le ton de l'action. Blanc sur cobalt :
+           8,87:1, très au-dessus du plancher — un bouton qu'on ne peut pas
+           lire est un bouton qu'on n'appuie pas. */
+        default: "bg-cobalt text-on-cobalt shadow-tone hover:brightness-110",
+        /* L'action principale en négatif, quand elle est posée sur un fond
+           déjà coloré et que le cobalt s'y perdrait. */
+        ink: "on-tone bg-ink text-on-ink shadow-tone hover:brightness-125",
+        destructive: "bg-destructive text-destructive-foreground hover:brightness-110",
+        /* Le contour porte deux pixels et non un : à un pixel, sur une
+           nappe en dégradé, le trait disparaît par endroits. */
+        outline: "border-2 border-input bg-card/70 hover:bg-accent hover:text-accent-foreground",
+        secondary: "bg-secondary text-secondary-foreground hover:brightness-95",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-6",
-        icon: "h-9 w-9",
+        default: "h-10 px-5 text-dense",
+        sm: "h-9 px-4 text-meta",
+        lg: "h-12 px-7 text-body",
+        /* Un cercle parfait. C'est la forme des affordances secondaires des
+           deux références : elles se posent au coin d'un panneau sans jamais
+           se disputer la lecture avec son contenu. */
+        icon: "h-10 w-10",
+        "icon-sm": "h-9 w-9",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

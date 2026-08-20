@@ -2,185 +2,320 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 
+/* =====================================================================
+   VERRIÈRE
+
+   L'app tenait sur deux plans distants de 2 % et une ombre invisible : un
+   fil de fer propre, mais un fil de fer. Rien n'y était *regardé* en
+   premier, parce que rien n'y était plus fort que le reste.
+
+   Le parti pris est celui d'un atelier sous verrière. Trois pièces :
+
+   1. la LUMIÈRE — le sol n'est plus un aplat mais une nappe ambiante,
+      trois halos fixes qui ne défilent pas ;
+   2. les PANNEAUX — de grandes surfaces à rayon large, posées sur cette
+      lumière, sans filet pour les détourer ;
+   3. les TONS — cinq aplats pleins qui font la hiérarchie. C'est la pièce
+      qui manquait : sans eux, la hiérarchie reposait sur la taille du
+      texte seule, et une page entière de gris se lit comme un formulaire.
+
+   Deux systèmes de couleur, et ils ne font pas le même travail :
+
+   — les TONS sont des *surfaces*. Ils disent « regarde ici ».
+   — les couleurs SÉMANTIQUES sont des *encres*. Elles disent « voici de
+     quelle nature c'est ».
+
+   Un ton ne porte jamais de texte fin ; une encre ne remplit jamais un
+   bloc. Confondre les deux, c'est ce qui donne les tableaux de bord où
+   tout crie et où plus rien ne se lit.
+   ===================================================================== */
+
 :root {
-  --radius: 0.625rem;
   color-scheme: light;
 
-  /* Forêt + terracotta.
-     Les neutres portent un voile vert très léger — c'est ce qui donne
-     le caractère sans jamais entrer en concurrence avec le sens. La
-     terracotta est réservée à l'action ; le vert dit « acquis », l'ocre
-     « à surveiller », la brique « problème ». Trois registres qui ne se
-     marchent pas dessus.
+  /* Le rayon est une information de plan, et l'écart entre les trois
+     valeurs est plus important que les valeurs elles-mêmes : un panneau
+     porte, un contrôle est porté, une pilule est cliquable. */
+  --radius: 0.75rem;
+  --panel-radius: 1.75rem;
 
-     Les valeurs ont été assombries d'un cran pour viser AAA (7:1) plutôt
-     que AA : l'outil est destiné à une vue qui baisse, et le gris de
-     second plan — celui qui porte les trois quarts du texte — passait tout
-     juste. La teinte est conservée exactement : chaque canal est multiplié
-     par un même facteur, ce qui déplace la clarté sans toucher au ton.
-     `--warning` reste à 4,5:1, il ne sert qu'à des icônes. */
+  /* ---- La nappe -----------------------------------------------------
+     Un fond en dégradé rend les contrastes incalculables *si on le laisse
+     faire* : chaque pixel devient un fond différent, et un plancher qu'on
+     ne peut pas mesurer n'est plus un plancher.
 
-  --background: #F7F8F6;
-  --foreground: #16211C;
+     La règle qui rend l'exercice tenable : la nappe n'a que **quatre
+     valeurs possibles** — le sol et les trois halos — et le pire des
+     quatre est mesuré. Les halos se recouvrent en s'éclaircissant, donc
+     aucun mélange ne descend sous le plus sombre des quatre.
+
+     Ici c'est le halo froid (#DFEAFC) qui est le point bas, et non le sol.
+     Tous les planchers de la colonne « clair » sont mesurés dessus.
+
+     Ajouter un quatrième halo veut dire refaire la mesure. */
+  --canvas: #EDEDE6;
+  --ambient-cool: 223 234 252;   /* cobalt délavé, en haut à gauche  */
+  --ambient-warm: 254 239 207;   /* bloom chaud, en haut à droite    */
+  --ambient-zest: 228 244 188;   /* zeste délavé, en bas             */
+
+  --background: var(--canvas);
+  --foreground: #131A18;
   --card: #FFFFFF;
-  --card-foreground: #16211C;
+  --card-foreground: #131A18;
   --popover: #FFFFFF;
-  --popover-foreground: #16211C;
-  --primary: #984826;
-  --primary-foreground: #FFFFFF;
-  --secondary: #EDF1EB;
-  --secondary-foreground: #16211C;
-  --muted: #EDF1EB;
-  --muted-foreground: #4E584B;
-  --accent: #E7EDE5;
-  --accent-foreground: #16211C;
-  --destructive: #993027;
+  --popover-foreground: #131A18;
+
+  /* ---- Les encres sémantiques ---------------------------------------
+     Quatre registres qui ne se marchent pas dessus. Ajouter une cinquième
+     couleur de sens demande d'en retirer une, pas de s'y ajouter.
+
+     Toutes mesurées sur le pire fond qu'elles peuvent rencontrer — les
+     quatre valeurs de la nappe, la carte, la fenêtre — et calées à 7:1.
+     L'outil est destiné à une vue qui baisse : la cible est AAA, pas AA. */
+  --primary: #2534C4;            /* l'action        — 7,31:1 en texte    */
+  --primary-foreground: #FFFFFF; /*                   8,87:1 sur cobalt  */
+  --success: #37500F;            /* acquis, obtenu  — 7,47:1             */
+  --warning: #654707;            /* à surveiller    — 7,04:1             */
+  --destructive: #8E2819;        /* problème        — 7,02:1             */
   --destructive-foreground: #FFFFFF;
-  --success: #23603F;
-  --warning: #936B26;
-  --border: #9FA39E;
-  /* Le trait d'un champ n'est pas celui d'une carte : celui-ci sépare,
-     celui-là désigne « ici on écrit ». La règle 1.4.11 demande 3:1 pour la
-     limite d'un composant ; on monte plus haut, et surtout on garde l'écart
-     entre les deux — 4,5:1 pour le champ contre 2,4:1 pour la carte, sinon
-     tout se vaut et plus rien ne hiérarchise. */
-  --input: #6D746F;
-  --ring: #984826;
 
-  /* Le canal se reconnaît sans lire le mot. */
-  --channel-email: #2F6E8F;
-  --channel-phone: #984826;
-  --channel-linkedin: #5C4E8A;
+  /* Neutre, et il doit le rester : un jeton qui ne signale rien ne doit
+     ressembler à aucun de ceux qui signalent. */
+  --secondary: #E2E3DC;
+  --secondary-foreground: #131A18;
+  --muted: #E4E5DD;
+  --muted-foreground: #454E48;    /* 7,11:1 au pire point de la nappe    */
+  --accent: #E4E5DD;
+  --accent-foreground: #131A18;
 
-  /* Les mêmes teintes, assombries pour être *lues* sur leur propre fond
-     pâle. Un badge, c'est du petit texte sur un aplat à 15 % : la couleur
-     qui porte bien en pastille d'icône n'y tient pas en lecture. Deux
-     jetons plutôt qu'un, donc : l'un pour la teinte, l'autre pour ce qui
-     doit rester lisible. Vérifié sur les deux fonds que porte un badge, la
-     carte et la page : 7:1 au pire. */
-  --success-on-tint: #1C5035;
-  --warning-on-tint: #5B4112;
-  --channel-email-on-tint: #225067;
-  --channel-phone-on-tint: #743519;
-  --channel-linkedin-on-tint: #4E4275;
+  --border: #A4A79E;              /* 2,01:1 — il sépare, il ne désigne pas */
+  --input: #646963;               /* 4,63:1 — au-delà des 3:1 de 1.4.11    */
+  --ring: #2534C4;
+
+  /* ---- Les tons : cinq surfaces, cinq rôles -------------------------
+     Chaque ton vient avec son encre. Ce n'est pas une commodité : une
+     teinte qui porte bien en aplat ne tient pas en texte de 14 px dessus,
+     et c'est exactement là qu'on s'en aperçoit trop tard. Aucun nouveau
+     ton sans son `--on-*`, mesuré à 7:1. */
+  --tone-ink: #101A17;      --on-ink: #EFF3EA;      /* 15,80:1 — l'ossature */
+  --tone-cobalt: #2534C4;   --on-cobalt: #FFFFFF;   /*  8,87:1 — l'action   */
+  --tone-zest: #CFF255;     --on-zest: #101A17;     /* 13,94:1 — le présent */
+  --tone-amber: #F9CE4C;    --on-amber: #101A17;    /* 11,81:1 — l'attente  */
+  --tone-clay: #F08A63;     --on-clay: #101A17;     /*  7,21:1 — le retard  */
+
+  /* ---- Les pastilles de canal ---------------------------------------
+     Le canal se reconnaît sans lire le mot. Elles restent en aplat pâle
+     et non en ton plein : un canal est une étiquette, pas une hiérarchie,
+     et cinq tons pleins plus trois canaux pleins feraient huit blocs qui
+     se disputent la même page. */
+  --chip-email: #D6E6F2;    --on-chip-email: #1C4A63;      /* 7,45:1 */
+  --chip-phone: #F6DFD3;    --on-chip-phone: #75381D;      /* 7,02:1 */
+  --chip-linkedin: #DEDCF2; --on-chip-linkedin: #3E3A78;   /* 7,51:1 */
+  --chip-neutral: #E2E3DC;  --on-chip-neutral: #131A18;    /* 13,68:1 */
+
+  /* ---- Les teintes ---------------------------------------------------
+     Un bloc d'avertissement à l'intérieur d'un panneau ne peut pas porter
+     le ton plein : il ferait concurrence au panneau qui le contient. Il
+     lui faut une version diluée — mais diluée *par un jeton*, pas par un
+     `bg-amber/30`.
+
+     La différence n'est pas cosmétique. `bg-amber/30` compose l'ambre sur
+     ce qu'il y a derrière : en clair cela donne le pastel attendu, en
+     sombre cela donne un kaki boueux, parce que le fond composé est
+     presque noir. Deux valeurs écrites à la main donnent le pastel dans
+     un thème et la teinte profonde dans l'autre, chacune choisie.
+
+     Le texte est `--foreground` dans les deux cas — 15,3:1 en clair,
+     11,2:1 en sombre. */
+  --tint-amber: #FBEECB;
+  --tint-clay: #FBDCCE;
+
+  /* ---- L'élévation --------------------------------------------------
+     Large et douce plutôt que serrée et nette : sous une verrière la
+     lumière est diffuse, et une ombre dure y serait un mensonge. Deux
+     couches quand même, parce qu'un objet réel en projette deux — un
+     contact au sol, une diffusion large.
+
+     Teintée à l'encre (#101A17) et jamais noire : une ombre grise dans un
+     environnement coloré se voit comme une salissure. */
+  --elevation-raised: 0 1px 2px -1px rgb(16 26 23 / 0.07),
+                      0 14px 36px -10px rgb(16 26 23 / 0.11);
+  --elevation-overlay: 0 8px 20px -6px rgb(16 26 23 / 0.13),
+                       0 36px 72px -18px rgb(16 26 23 / 0.24);
+  /* Un aplat de ton porte plus loin qu'une carte blanche : il est plus
+     lourd à l'œil, donc il lui faut une assise plus marquée, sinon il
+     flotte au-dessus de la page sans y toucher. */
+  --elevation-tone: 0 2px 4px -2px rgb(16 26 23 / 0.14),
+                    0 20px 44px -12px rgb(16 26 23 / 0.22);
 }
 
-/* Le thème sombre était écrit depuis le début mais ne s'allumait jamais :
-   rien ne posait la classe `.dark`, et aucun sélecteur ne regardait le
-   réglage du système. Il suit maintenant les préférences de l'OS.
-   `class="light"` sur <html> le force en clair, `class="dark"` en sombre —
-   les valeurs sont écrites deux fois parce qu'une media query ne se
+/* Le sombre n'est pas le clair inversé : la nappe descend, les panneaux
+   *montent*. Une ombre ne se voit pas sur un fond sombre — c'est l'écart
+   de valeur qui prend le relais, et un filet léger vient l'appuyer.
+   Les valeurs sont écrites deux fois parce qu'une media query ne se
    regroupe pas avec un sélecteur de classe. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     color-scheme: dark;
 
-    --background: #0E1512;
-    --foreground: #E4EAE3;
-    --card: #16201B;
-    --card-foreground: #E4EAE3;
-    --popover: #16201B;
-    --popover-foreground: #E4EAE3;
-    --primary: #E1966F;
-    --primary-foreground: #1B0E07;
-    --secondary: #1B2620;
-    --secondary-foreground: #E4EAE3;
-    --muted: #1B2620;
-    --muted-foreground: #A6B1A2;
-    --accent: #1F2C25;
-    --accent-foreground: #E4EAE3;
-    --destructive: #E89086;
+    /* Même règle qu'en clair, à l'envers : les halos *éclaircissent* la
+       nappe, donc le pire fond du sombre est le plus clair des quatre —
+       le halo froid (#16232E), sur lequel le texte de second plan tient
+       à 7,53:1. */
+    --canvas: #0A0F0E;
+    --ambient-cool: 22 35 46;
+    --ambient-warm: 36 26 20;
+    --ambient-zest: 26 38 18;
+
+    --background: var(--canvas);
+    --foreground: #E8EDE4;
+    --card: #151D1A;
+    --card-foreground: #E8EDE4;
+    --popover: #1C2622;
+    --popover-foreground: #E8EDE4;
+
+    --primary: #A3ADFF;
+    --primary-foreground: #0B1023;
+    --success: #B4D96A;
+    --warning: #E3BC63;
+    --destructive: #F79A87;
     --destructive-foreground: #1B0E07;
-    --success: #71BE90;
-    --warning: #D4A659;
-    --border: #525C56;
-    /* 3,47:1 sur la carte, 3,84:1 sur la page. */
-    --input: #7D877F;
-    --ring: #E1966F;
 
-    --channel-email: #67A8C7;
-    --channel-phone: #E1966F;
-    --channel-linkedin: #9A8AC9;
+    --secondary: #222B27;
+    --secondary-foreground: #E8EDE4;
+    --muted: #1B241F;
+    --muted-foreground: #A9B5AC;
+    --accent: #222B27;
+    --accent-foreground: #E8EDE4;
 
-    /* Sur fond sombre l'aplat descend au lieu de monter, ce qui suffisait
-       tant qu'on visait AA. Pour AAA il faut quand même éclaircir le texte
-       du badge : la teinte brute plafonnait à 4,6:1 sur son propre aplat. */
-    --success-on-tint: #94CEAC;
-    --warning-on-tint: #E4C796;
-    --channel-email-on-tint: #91C0D6;
-    --channel-phone-on-tint: #E9B397;
-    --channel-linkedin-on-tint: #BCB1DB;
+    --border: #4E5A54;
+    --input: #828E86;
+    --ring: #A3ADFF;
+
+    /* Deux corrections propres au sombre.
+
+       L'encre remonte à #1F2B27, au-dessus de la carte (#151D1A) et de la
+       fenêtre (#1C2622). À sa valeur du clair elle se confondait avec la
+       carte : l'en-tête encre de l'action ouverte — le repère le plus fort
+       de la file — disparaissait purement et simplement. Ici comme
+       ailleurs en sombre, ce qui compte *monte*.
+
+       Le cobalt s'éclaircit d'un cran : à sa valeur du clair, du blanc
+       dessus tombait à 6,3:1 sur cette nappe. */
+    --tone-ink: #1F2B27;      --on-ink: #EFF3EA;
+    --tone-cobalt: #3341CB;   --on-cobalt: #FFFFFF;
+    --tone-zest: #C6EC55;     --on-zest: #0F1614;
+    --tone-amber: #EFC259;    --on-amber: #0F1614;
+    --tone-clay: #E88760;     --on-clay: #0F1614;
+
+    --chip-email: #12262F;    --on-chip-email: #A9D2EA;
+    --chip-phone: #2B1810;    --on-chip-phone: #F0B394;
+    --chip-linkedin: #1D1B33; --on-chip-linkedin: #BDB6EE;
+    --chip-neutral: #222B27;  --on-chip-neutral: #E8EDE4;
+
+    --tint-amber: #3A2E10;
+    --tint-clay: #3A1E12;
+
+    --elevation-raised: 0 1px 2px -1px rgb(0 0 0 / 0.5),
+                        0 10px 28px -10px rgb(0 0 0 / 0.55);
+    --elevation-overlay: 0 6px 16px -4px rgb(0 0 0 / 0.6),
+                         0 32px 64px -16px rgb(0 0 0 / 0.7);
+    --elevation-tone: 0 2px 6px -2px rgb(0 0 0 / 0.5),
+                      0 22px 48px -14px rgb(0 0 0 / 0.6);
   }
 }
 
 .dark {
   color-scheme: dark;
 
-  --background: #0E1512;
-  --foreground: #E4EAE3;
-  --card: #16201B;
-  --card-foreground: #E4EAE3;
-  --popover: #16201B;
-  --popover-foreground: #E4EAE3;
-  --primary: #E1966F;
-  --primary-foreground: #1B0E07;
-  --secondary: #1B2620;
-  --secondary-foreground: #E4EAE3;
-  --muted: #1B2620;
-  --muted-foreground: #A6B1A2;
-  --accent: #1F2C25;
-  --accent-foreground: #E4EAE3;
-  --destructive: #E89086;
+  --canvas: #0A0F0E;
+  --ambient-cool: 22 35 46;
+  --ambient-warm: 36 26 20;
+  --ambient-zest: 26 38 18;
+
+  --background: var(--canvas);
+  --foreground: #E8EDE4;
+  --card: #151D1A;
+  --card-foreground: #E8EDE4;
+  --popover: #1C2622;
+  --popover-foreground: #E8EDE4;
+
+  --primary: #A3ADFF;
+  --primary-foreground: #0B1023;
+  --success: #B4D96A;
+  --warning: #E3BC63;
+  --destructive: #F79A87;
   --destructive-foreground: #1B0E07;
-  --success: #71BE90;
-  --warning: #D4A659;
-  --border: #525C56;
-  --input: #7D877F;
-  --ring: #E1966F;
 
-  --channel-email: #67A8C7;
-  --channel-phone: #E1966F;
-  --channel-linkedin: #9A8AC9;
+  --secondary: #222B27;
+  --secondary-foreground: #E8EDE4;
+  --muted: #1B241F;
+  --muted-foreground: #A9B5AC;
+  --accent: #222B27;
+  --accent-foreground: #E8EDE4;
 
-  --success-on-tint: #94CEAC;
-  --warning-on-tint: #E4C796;
-  --channel-email-on-tint: #91C0D6;
-  --channel-phone-on-tint: #E9B397;
-  --channel-linkedin-on-tint: #BCB1DB;
+  --border: #4E5A54;
+  --input: #828E86;
+  --ring: #A3ADFF;
+
+  --tone-ink: #1F2B27;      --on-ink: #EFF3EA;
+  --tone-cobalt: #3341CB;   --on-cobalt: #FFFFFF;
+  --tone-zest: #C6EC55;     --on-zest: #0F1614;
+  --tone-amber: #EFC259;    --on-amber: #0F1614;
+  --tone-clay: #E88760;     --on-clay: #0F1614;
+
+  --chip-email: #12262F;    --on-chip-email: #A9D2EA;
+  --chip-phone: #2B1810;    --on-chip-phone: #F0B394;
+  --chip-linkedin: #1D1B33; --on-chip-linkedin: #BDB6EE;
+  --chip-neutral: #222B27;  --on-chip-neutral: #E8EDE4;
+
+  --tint-amber: #3A2E10;
+  --tint-clay: #3A1E12;
+
+  --elevation-raised: 0 1px 2px -1px rgb(0 0 0 / 0.5),
+                      0 10px 28px -10px rgb(0 0 0 / 0.55);
+  --elevation-overlay: 0 6px 16px -4px rgb(0 0 0 / 0.6),
+                       0 32px 64px -16px rgb(0 0 0 / 0.7);
+  --elevation-tone: 0 2px 6px -2px rgb(0 0 0 / 0.5),
+                    0 22px 48px -14px rgb(0 0 0 / 0.6);
 }
 
-
 @theme inline {
-  /* Les caractères étaient le seul axe non décidé : sans famille déclarée,
-     l'app s'affichait dans ce que le système voulait bien fournir — donc
-     pas la même chose sur un Mac, un PC et un Android. Inter Tight tient
-     le texte dense en 13-15 px et porte de vrais chiffres tabulaires, ce
-     dont vivent les colonnes de score et le tableau de rendement.
-     `--font-inter-tight` et `--font-jetbrains-mono` sont posées sur <html>
-     par `next/font` ; la pile de secours sert le temps du chargement, et
-     si la police ne se charge jamais. */
+  /* ---- Les caractères ------------------------------------------------
+     Trois familles, trois métiers, et la frontière est nette :
+
+     — Bricolage Grotesque *affiche*. Elle ne descend jamais sous 20 px.
+       C'est une grotesque à chasse variable, dessinée pour les grandes
+       tailles : ses contreformes se resserrent quand le corps grossit, ce
+       qu'Inter ne fait pas — un titre en Inter à 45 px est un texte de
+       15 px agrandi, et ça se voit.
+     — Inter Tight *lit*. Tout le texte courant, dense, en français.
+     — JetBrains Mono *compte*. Nombres, dates, codes, étiquettes.
+
+     Posées par `next/font` dans `layout.tsx`, donc servies depuis le même
+     domaine : rien ne part chez Google au chargement d'une page. */
+  --font-display: var(--font-bricolage), var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, monospace;
 
-  /* L'échelle, en un seul endroit.
-     Elle n'existait pas : 90 des 111 tailles écrites dans l'app étaient
-     `text-sm` ou `text-xs`, c'est-à-dire 14 et 12 px, et rien n'était à
-     16 px. Un texte qu'on lit en continu — une description de confirmation
-     avant une action irréversible, un brouillon qu'on relit avant de
-     l'envoyer — ne se lit pas confortablement à 14 px.
-     Le namespace `--text-*` de Tailwind v4 fabrique les utilitaires
-     correspondants : `text-meta`, `text-dense`, `text-body`, `text-title`.
-     Les tailles par défaut (`text-sm`, `text-xs`) restent disponibles. */
-  --text-meta: 0.8125rem;   /* 13px — méta, badges, en-têtes de colonne */
-  /* `text-xs` est écrit 41 fois dans l'app, héritage d'avant l'échelle. Le
-     remonter au plancher plutôt que de réécrire 41 endroits : plus rien ne
-     descend alors sous la plus petite taille qu'on s'autorise. Le nom ment
-     un peu — `text-xs` ne vaut plus 12 px — mais un nom trompeur pèse moins
-     qu'une ligne de 12 px devant quelqu'un qui voit mal. */
-  --text-xs: 0.8125rem;
-  --text-dense: 0.9375rem;  /* 15px — tableaux, contenus de carte       */
-  --text-body: 1rem;        /* 16px — prose, aides, brouillons          */
-  --text-title: 1.0625rem;  /* 17px — titres de carte                   */
+  /* ---- L'échelle -----------------------------------------------------
+     Rendu réel entre parenthèses : la racine est à 112,5 % (voir plus
+     bas), donc 1 rem vaut 18 px et non 16.
+
+     L'écart du haut de l'échelle a été ouvert en grand. Un titre de page
+     à 24 px au-dessus d'un corps à 15 px, c'est un rapport de 1,6 — trop
+     faible pour qu'on sache d'un coup d'œil où commence la page. À 45 px
+     le rapport passe à 3, et le titre redevient ce qu'il doit être : le
+     premier point de fixation. C'est le levier le moins cher de toute la
+     direction artistique, et celui qu'on n'ose jamais tirer. */
+  --text-meta: 0.8125rem;    /* 13 px → 14,6 px — plancher absolu       */
+  --text-xs: 0.8125rem;      /* alias du plancher, rien ne descend plus bas */
+  --text-dense: 0.9375rem;   /* 15 px → 16,9 px — tableaux, cartes      */
+  --text-body: 1rem;         /* 16 px → 18   px — prose, brouillons     */
+  --text-title: 1.125rem;    /* 18 px → 20,3 px — titres de panneau     */
+  --text-stat: 1.75rem;      /* 28 px → 31,5 px — un nombre qu'on lit    */
+  --text-headline: 1.625rem; /* 26 px → 29,3 px — titre de section forte */
+  --text-display: 2.5rem;    /* 40 px → 45   px — titre de page          */
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -200,22 +335,48 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
-  --color-channel-email: var(--channel-email);
-  --color-channel-phone: var(--channel-phone);
-  --color-channel-linkedin: var(--channel-linkedin);
-  --color-success-on-tint: var(--success-on-tint);
-  --color-warning-on-tint: var(--warning-on-tint);
-  --color-channel-email-on-tint: var(--channel-email-on-tint);
-  --color-channel-phone-on-tint: var(--channel-phone-on-tint);
-  --color-channel-linkedin-on-tint: var(--channel-linkedin-on-tint);
+
+  /* Les tons, en paires. `bg-ink text-on-ink`, `bg-zest text-on-zest` —
+     le nom du jeton rappelle qu'il ne s'utilise pas seul. */
+  --color-ink: var(--tone-ink);
+  --color-on-ink: var(--on-ink);
+  --color-cobalt: var(--tone-cobalt);
+  --color-on-cobalt: var(--on-cobalt);
+  --color-zest: var(--tone-zest);
+  --color-on-zest: var(--on-zest);
+  --color-amber: var(--tone-amber);
+  --color-on-amber: var(--on-amber);
+  --color-clay: var(--tone-clay);
+  --color-on-clay: var(--on-clay);
+
+  --color-chip-email: var(--chip-email);
+  --color-on-chip-email: var(--on-chip-email);
+  --color-chip-phone: var(--chip-phone);
+  --color-on-chip-phone: var(--on-chip-phone);
+  --color-chip-linkedin: var(--chip-linkedin);
+  --color-on-chip-linkedin: var(--on-chip-linkedin);
+  --color-chip-neutral: var(--chip-neutral);
+  --color-on-chip-neutral: var(--on-chip-neutral);
+
+  --color-tint-amber: var(--tint-amber);
+  --color-tint-clay: var(--tint-clay);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
+  --shadow-raised: var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
+  --shadow-tone: var(--elevation-tone);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Le grand rayon des panneaux. Nommé et non chiffré au point d'usage :
+     c'est la valeur qui donne son air à toute l'app, et elle doit se
+     changer en un endroit. */
+  --radius-panel: var(--panel-radius);
 }
 
 @layer base {
@@ -224,13 +385,10 @@
      aussi la hauteur des boutons, celle des champs, les marges et les
      cibles à viser. C'est ce qu'il faut pour une vue qui baisse — un texte
      plus gros dans une interface restée petite ne sert qu'à moitié.
-     En pourcentage et non en pixels : si quelqu'un a déjà agrandi la police
-     dans son navigateur, cette valeur s'y ajoute au lieu de l'écraser. Un
-     `font-size` en dur sur `html` annulerait ce réglage, ce qui est
-     précisément ce qu'il ne faut pas faire à un lecteur qui en a besoin.
-     Les points de rupture ne bougent pas : dans une media query, `rem` se
-     mesure toujours sur la taille initiale du navigateur, jamais sur
-     celle posée ici. */
+     En pourcentage et non en pixels : si quelqu'un a déjà agrandi la
+     police dans son navigateur, cette valeur s'y ajoute au lieu de
+     l'écraser. Les points de rupture ne bougent pas — dans une media
+     query, `rem` se mesure sur la taille initiale du navigateur. */
   html {
     font-size: 112.5%;
   }
@@ -241,18 +399,47 @@
   }
 
   body {
-    background-color: var(--background);
+    background-color: var(--canvas);
     color: var(--foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- La nappe ambiante ---------------------------------------------
+     Trois halos, posés une fois pour toute l'app, en `position: fixed` :
+     ils ne défilent pas. Un dégradé qui défile avec le contenu se
+     transforme en bandes dès qu'on descend, et l'illusion de lumière
+     tombe — on veut une pièce éclairée, pas un papier peint.
+
+     Chaque halo s'éteint vers *sa propre couleur en alpha 0* et non vers
+     `transparent` : `transparent` vaut `rgba(0,0,0,0)` en CSS, et
+     l'interpolation passe alors par du noir — le halo se borde d'un liseré
+     sale. C'est le piège classique des dégradés, et il ne se voit qu'une
+     fois en production.
+
+     Les halos se composent en s'éclaircissant, jamais en s'assombrissant :
+     aucun recouvrement ne peut donc descendre sous le plus sombre des
+     quatre valeurs de la nappe. C'est ce qui réduit un fond continu à
+     quatre fonds mesurables. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(75rem 55rem at 4% -14%,
+        rgb(var(--ambient-cool) / 0.95), rgb(var(--ambient-cool) / 0) 62%),
+      radial-gradient(62rem 48rem at 100% -4%,
+        rgb(var(--ambient-warm) / 0.9), rgb(var(--ambient-warm) / 0) 58%),
+      radial-gradient(88rem 62rem at 72% 108%,
+        rgb(var(--ambient-zest) / 0.95), rgb(var(--ambient-zest) / 0) 60%);
   }
 
   code, kbd, pre, samp {
     font-family: var(--font-mono);
   }
 
-  /* Les nombres qui changent ne doivent pas déplacer ce qui les suit :
-     un score qui passe de 9 à 10 ne doit pas décaler sa colonne. */
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
@@ -265,16 +452,88 @@
     cursor: pointer;
   }
 
-  /* Le repère de focus, une seule fois pour toute l'app — boutons,
-     champs, liens, `summary`, zone de dépôt. Un `outline` plutôt qu'un
-     `ring` : il suit le rayon des coins et laisse voir la surface derrière
-     son décalage, là où un `ring-offset` doit deviner la couleur du fond
-     et se trompe dès qu'un bouton est posé sur une carte. Ne remettez pas
-     `outline-none` dans un composant sans le remplacer par autre chose. */
+  /* Le repère de focus, une seule fois pour toute l'app. Un `outline`
+     plutôt qu'un `ring` : il suit le rayon des coins et laisse voir la
+     surface derrière son décalage, là où un `ring-offset` doit deviner la
+     couleur du fond et se trompe dès qu'un bouton est posé sur un ton
+     plein. Ne remettez pas `outline-none` dans un composant sans le
+     remplacer par autre chose. */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+
+  /* Sur un aplat de ton, le cobalt du focus disparaît. L'anneau emprunte
+     alors l'encre du ton, qui est par construction à 7:1 dessus. */
+  .on-tone :focus-visible,
+  .on-tone:focus-visible {
+    outline-color: currentColor;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   Les trois registres typographiques, en utilitaires.
+   --------------------------------------------------------------------- */
+
+/* L'AFFICHAGE. Bricolage Grotesque, resserrée, très peu d'interlignage.
+   Le `letter-spacing` négatif n'est pas une coquetterie : une grotesque
+   composée à 45 px avec l'approche du texte courant se disloque, les mots
+   cessent de faire des blocs. Il compense ce que la fonte ne compense pas
+   seule ici (l'axe optique n'est pas piloté).
+
+   Réservé aux titres de page et aux nombres qui *sont* l'information.
+   Jamais en dessous de 20 px : en petit, elle perd sa raison d'être et
+   Inter Tight lit mieux. */
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.032em;
+  line-height: 1.04;
+}
+
+/* L'ÉTIQUETTE : en-tête de colonne, intertitre, sur-titre. Les capitales
+   et l'interlettrage viennent de la fonction — on étiquette, on ne titre
+   pas.
+
+   La taille est comprise dans l'utilitaire, et c'est délibéré : une
+   étiquette est le premier endroit où l'on est tenté de descendre à
+   11 px. Elle est clouée au plancher de l'app. Ne pas y ajouter de
+   `text-*` : les deux se disputeraient. */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* LA DONNÉE : score, compteur, date, SIREN. Les deux propriétés voyagent
+   ensemble parce qu'elles servent la même chose — une colonne de nombres
+   qui ne se décale pas quand les nombres changent. Pas de taille ici : la
+   donnée se lit à la taille de ce qui l'entoure. */
+@utility numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Le grand nombre d'un bandeau de chiffres : la donnée, mais à
+   l'affichage. Bricolage porte de vrais chiffres tabulaires, donc un
+   compteur qui monte ne pousse pas son voisin. */
+@utility stat {
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+/* Le verre. Un panneau translucide qui laisse passer la nappe — réservé
+   à ce qui flotte *au-dessus* du contenu (barre de navigation étroite,
+   bandeau collant). Sur du contenu qui défile dessous, un aplat opaque
+   est toujours préférable : le texte derrière transparaît sinon. */
+@utility glass {
+  background-color: color-mix(in oklch, var(--card) 78%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
 }
 
 /* Les modales s'ouvraient d'un coup, sans rien pour relier la boîte au

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter_Tight, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeSync } from "@/components/theme-toggle";
@@ -28,6 +28,25 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+/**
+ * Le caractère d'affichage, et lui seul.
+ *
+ * Inter Tight lit très bien à 15 px et très mal à 45 : une grotesque
+ * dessinée pour le texte, agrandie, donne un titre mou — les contreformes
+ * restent ouvertes, l'approche reste celle du petit corps, et le titre a
+ * l'air d'un paragraphe qu'on aurait zoomé. Bricolage Grotesque est
+ * dessinée dans l'autre sens : elle a du caractère en grand et n'en a
+ * aucun en petit, ce qui est exactement le partage qu'on veut.
+ *
+ * D'où la règle : elle ne descend jamais sous 20 px. En dessous, c'est
+ * Inter Tight — voir l'utilitaire `display` dans `globals.css`.
+ */
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Prospection",
   description: "Sourcing, séquences et file de travail commerciale",
@@ -42,8 +61,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: "light dark",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F7F8F6" },
-    { media: "(prefers-color-scheme: dark)", color: "#0E1512" },
+    { media: "(prefers-color-scheme: light)", color: "#EDEDE6" },
+    { media: "(prefers-color-scheme: dark)", color: "#0A0F0E" },
   ],
 };
 
@@ -53,13 +72,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
        <html> avant que React n'hydrate. Sans ça, React verrait l'écart entre
        ce qu'il a rendu et ce qu'il trouve, le signalerait comme une erreur,
        et re-rendrait — en effaçant la classe au passage. */
-    <html lang="fr" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
+    <html lang="fr" className={`${sans.variable} ${mono.variable} ${display.variable}`} suppressHydrationWarning>
       <head>
         {/* Avant toute peinture : sinon on verrait le thème du système
             s'afficher une fraction de seconde, puis être corrigé. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <body className="min-h-screen text-foreground antialiased">
         <ThemeSync />
         {/* Le fournisseur couvre toute l'app, y compris la page de
             connexion et la page d'erreur : sans lui, une infobulle lève. */}

@@ -27,13 +27,28 @@ export async function createClient() {
   );
 }
 
-/** L'utilisateur courant, ou null. Vérifié côté serveur Supabase. */
-export async function currentUser() {
+/**
+ * L'utilisateur courant, ou null. Vérifié cryptographiquement.
+ *
+ * `getUser()` interrogeait le serveur d'auth Supabase à chaque appel :
+ * 90 à 250 ms mesurés, payés sur chaque rendu de page et chaque action.
+ * Or ce projet signe ses jetons en ES256 — une clé asymétrique, dont la
+ * partie publique est servie sur `/.well-known/jwks.json`. `getClaims()`
+ * récupère ce jeu de clés une fois, le garde en mémoire pour tout le
+ * processus, et vérifie ensuite la signature en local via WebCrypto.
+ *
+ * La garantie est la même : une signature ES256 ne se falsifie pas sans
+ * la clé privée, qui ne quitte jamais Supabase. Ce qui disparaît est
+ * l'aller-retour réseau, pas le contrôle.
+ *
+ * Le rafraîchissement du jeton reste assuré — `getClaims()` renouvelle la
+ * session quand l'expiration approche, avant de vérifier.
+ */
+export async function currentUser(): Promise<{ id: string; email: string | null } | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data) return null;
+  return { id: data.claims.sub, email: data.claims.email ?? null };
 }
 
 /**

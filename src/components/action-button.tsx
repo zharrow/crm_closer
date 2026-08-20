@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { AnimateIcon } from "@/components/animate-ui/icons/icon";
 
 export interface ConfirmSpec {
   /** Ce qu'on s'apprête à faire, en quelques mots. */
@@ -67,9 +68,18 @@ export const ActionButton = React.forwardRef<HTMLButtonElement, ActionButtonProp
         <Tooltip>
           <TooltipTrigger asChild>
             <span className="inline-flex">
-              <Button ref={ref} onClick={handleClick} {...props}>
-                {children}
-              </Button>
+              {/* Le survol se déclenche sur le bouton entier, pas sur l'icône.
+                  Animate UI pose ses gestionnaires sur le `<svg>` lui-même :
+                  il fallait viser un glyphe de 18 px pour déclencher quoi que
+                  ce soit, et le moindre déplacement à l'intérieur du bouton ne
+                  rejouait rien. En enveloppant ici, c'est la surface entière —
+                  une quarantaine de pixels — qui répond. Les icônes enfants
+                  héritent par contexte et n'ont plus besoin d'`animateOnHover`. */}
+              <AnimateIcon animateOnHover asChild>
+                <Button ref={ref} onClick={handleClick} {...props}>
+                  {children}
+                </Button>
+              </AnimateIcon>
             </span>
           </TooltipTrigger>
           <TooltipContent>{tooltip}</TooltipContent>

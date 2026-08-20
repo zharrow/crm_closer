@@ -2,23 +2,43 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/**
+ * La pastille passe de l'aplat pâle au ton plein.
+ *
+ * Elle était rendue en teinte à 15 % avec un texte assombri : lisible,
+ * mesuré, et parfaitement invisible à un mètre de l'écran. Or une pastille
+ * sert précisément à être vue sans être lue — un score, un canal, un état
+ * se repèrent à la couleur avant que le mot ne soit déchiffré.
+ *
+ * Deux familles, et elles ne se mélangent pas :
+ *
+ * — les TONS pleins (`default`, `success`, `warning`, `destructive`) pour
+ *   ce qui hiérarchise : un score, un retard, une action ;
+ * — les PASTILLES pâles (`email`, `phone`, `linkedin`, `secondary`) pour
+ *   ce qui étiquette : un canal, un état neutre. Une étiquette qui crie
+ *   autant qu'un score fait perdre le score.
+ *
+ * Toutes portent leur encre dédiée, mesurée à 7:1 sur leur propre fond —
+ * jamais `text-foreground` posé à l'aveugle sur un aplat coloré.
+ */
 const badgeVariants = cva(
-  "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium transition-colors whitespace-nowrap",
+  "inline-flex items-center rounded-full px-2.5 py-0.5 text-meta font-medium whitespace-nowrap transition-colors",
   {
     variants: {
       variant: {
-        default: "border-transparent bg-primary text-primary-foreground",
-        secondary: "border-transparent bg-secondary text-secondary-foreground",
-        destructive: "border-transparent bg-destructive text-destructive-foreground",
-        /* Aplat pâle + texte assombri : la teinte pure ne passe pas AA en
-           12px sur son propre fond, d'où les jetons `-on-tint`. */
-        success: "border-transparent bg-success/15 text-success-on-tint",
-        warning: "border-transparent bg-warning/20 text-warning-on-tint",
-        outline: "text-foreground",
-        /* Le canal doit se reconnaître sans lire le mot. */
-        email: "border-transparent bg-channel-email/12 text-channel-email-on-tint",
-        phone: "border-transparent bg-channel-phone/15 text-channel-phone-on-tint",
-        linkedin: "border-transparent bg-channel-linkedin/12 text-channel-linkedin-on-tint",
+        default: "bg-cobalt text-on-cobalt",
+        ink: "bg-ink text-on-ink",
+        /* Acquis, obtenu. Le zeste est la couleur la plus voyante de la
+           palette et c'est voulu : un score élevé est ce qu'on cherche des
+           yeux en parcourant une liste de deux cents lignes. */
+        success: "bg-zest text-on-zest",
+        warning: "bg-amber text-on-amber",
+        destructive: "bg-clay text-on-clay",
+        secondary: "bg-chip-neutral text-on-chip-neutral",
+        outline: "border border-border text-foreground",
+        email: "bg-chip-email text-on-chip-email",
+        phone: "bg-chip-phone text-on-chip-phone",
+        linkedin: "bg-chip-linkedin text-on-chip-linkedin",
       },
     },
     defaultVariants: { variant: "default" },

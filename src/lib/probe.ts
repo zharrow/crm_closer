@@ -201,11 +201,142 @@ async function inspect(url: string): Promise<Signal[]> {
     });
   }
 
+  signals.push(...accessibility(html));
+  signals.push(...datedBuild(html));
+
   // Un site sain ne produit aucun signal : on en pose un neutre pour que
   // le lead soit tout de même scoré, plutôt que de rester bloqué en
   // « enrichi » indéfiniment faute de ligne dans lead_signals.
   if (signals.length === 0) {
     signals.push({ kind: "site_ok", label: "site en bon état", weight: 0 });
+  }
+
+  return signals;
+}
+
+/**
+ * L'accessibilité, telle qu'elle se constate depuis l'extérieur.
+ *
+ * C'était le gisement le plus évident et le seul absent : ces défauts se
+ * lisent dans le HTML, sans rien rendre, et ils touchent exactement ce que
+ * l'expéditeur vend — la qualité de fabrication, pas la plomberie.
+ *
+ * On reste sur ce qui est **certain à la lecture du balisage**. Le contraste
+ * réel d'un texte posé sur une photo ne s'en déduit pas : il demande de
+ * peindre la page, et c'est le travail de la passe visuelle, pas d'ici. Une
+ * regex qui prétendrait juger un contraste se tromperait, et un signal faux
+ * coûte plus qu'un signal manquant : il part dans un email.
+ *
+ * Repère de comparaison : WebAIM relève des échecs WCAG détectés sur 95,9 %
+ * des pages d'accueil du million de sites les plus visités (février 2026).
+ * Ces défauts sont donc la règle, pas l'exception — ce qui en fait un angle
+ * d'entrée, jamais un reproche.
+ */
+function accessibility(html: string): Signal[] {
+  const signals: Signal[] = [];
+
+  // Le zoom interdit : une ligne dans la balise viewport, et le texte ne
+  // peut plus être agrandi. Le défaut le plus dur pour qui voit mal, et
+  // l'un des plus faciles à constater.
+  if (/<meta[^>]+name=["']viewport["'][^>]*(?:user-scalable\s*=\s*["']?no|maximum-scale\s*=\s*["']?1)/i.test(html)) {
+    signals.push({
+      kind: "no_zoom",
+      label: "zoom désactivé sur mobile",
+      weight: 20,
+    });
+  }
+
+  // `lang` absent : un lecteur d'écran prononce le français avec les règles
+  // de sa langue par défaut, et devient incompréhensible.
+  if (!/<html[^>]+lang\s*=\s*["'][a-z]/i.test(html)) {
+    signals.push({
+      kind: "no_lang",
+      label: "langue de la page non déclarée",
+      weight: 10,
+    });
+  }
+
+  // Images sans alternative textuelle. On compte plutôt que de signaler au
+  // premier manquant : une image décorative sans `alt` est normale, dix
+  // images sur douze sans `alt` est un défaut de fabrication.
+  const imgs = html.match(/<img\b[^>]*>/gi) ?? [];
+  const withoutAlt = imgs.filter((tag) => !/\balt\s*=/i.test(tag)).length;
+  if (imgs.length >= 4 && withoutAlt / imgs.length > 0.5) {
+    signals.push({
+      kind: "images_no_alt",
+      label: `${withoutAlt} images sur ${imgs.length} sans texte alternatif`,
+      weight: 15,
+    });
+  }
+
+  // Champs de formulaire sans étiquette reliée. Même prudence : on ne
+  // signale que si le formulaire existe et qu'aucun champ n'est étiqueté.
+  const inputs = html.match(/<input\b[^>]*>/gi) ?? [];
+  const real = inputs.filter((tag) => !/type\s*=\s*["'](?:hidden|submit|button|image)["']/i.test(tag));
+  const labelled = /<label\b[^>]*\bfor\s*=/i.test(html) || /aria-label(?:ledby)?\s*=/i.test(html);
+  if (real.length >= 2 && !labelled) {
+    signals.push({
+      kind: "inputs_no_label",
+      label: "champs de formulaire sans étiquette",
+      weight: 15,
+    });
+  }
+
+  // Aucun titre de niveau 1 : la page n'annonce pas de quoi elle parle, ni
+  // à un lecteur d'écran ni à un moteur.
+  if (!/<h1\b/i.test(html)) {
+    signals.push({
+      kind: "no_h1",
+      label: "page sans titre principal",
+      weight: 10,
+    });
+  }
+
+  return signals;
+}
+
+/**
+ * Les indices de vétusté — et ce sont des **indices**, pas des preuves.
+ *
+ * On ne peut pas conclure « ce site est laid » d'une balise. Ce qu'on peut
+ * établir, c'est qu'il repose sur des techniques abandonnées : une largeur
+ * figée en pixels, une version de jQuery d'il y a dix ans, des balises de
+ * présentation supprimées de HTML5. Chacun de ces indices date la
+ * fabrication sans juger le résultat, et c'est la formulation honnête.
+ *
+ * Le jugement esthétique proprement dit demande de voir la page. Il ne se
+ * fait pas ici.
+ */
+function datedBuild(html: string): Signal[] {
+  const signals: Signal[] = [];
+
+  // Balises de présentation retirées de HTML5, encore en usage.
+  if (/<(?:center|font|marquee|blink)\b/i.test(html)) {
+    signals.push({
+      kind: "legacy_tags",
+      label: "balises de présentation abandonnées depuis HTML5",
+      weight: 20,
+    });
+  }
+
+  // Largeur figée : la page ne peut pas s'adapter, quelle que soit la
+  // balise viewport.
+  if (/width\s*:\s*(?:9[0-9]{2}|1[0-9]{3})px/i.test(html)) {
+    signals.push({
+      kind: "fixed_width",
+      label: "mise en page figée à une largeur d'écran",
+      weight: 15,
+    });
+  }
+
+  // jQuery 1.x/2.x : plus maintenu, et bon marqueur de l'âge du chantier.
+  const jq = /jquery[.-](\d+)\.\d+(?:\.\d+)?(?:\.min)?\.js/i.exec(html);
+  if (jq && Number(jq[1]) < 3) {
+    signals.push({
+      kind: "old_jquery",
+      label: `bibliothèque jQuery ${jq[1]}.x, sans mise à jour depuis des années`,
+      weight: 10,
+    });
   }
 
   return signals;

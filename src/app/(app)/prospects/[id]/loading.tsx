@@ -25,21 +25,21 @@ export default function LeadLoading() {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-6">
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-panel bg-card p-6 shadow-raised dark:border">
             <Skeleton className="h-5 w-24" />
             <Skeleton className="mt-4 h-24 w-full" />
           </div>
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-panel bg-card p-6 shadow-raised dark:border">
             <Skeleton className="h-5 w-44" />
             <Skeleton className="mt-4 h-32 w-full" />
           </div>
         </div>
         <div className="flex flex-col gap-6">
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-panel bg-card p-6 shadow-raised dark:border">
             <Skeleton className="h-5 w-36" />
             <Skeleton className="mt-4 h-28 w-full" />
           </div>
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
+          <div className="rounded-panel bg-card p-6 shadow-raised dark:border">
             <Skeleton className="h-5 w-20" />
             <Skeleton className="mt-4 h-24 w-full" />
           </div>

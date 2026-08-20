@@ -85,9 +85,9 @@ export function ThemeToggle() {
             title={hint}
             onClick={() => choose(value)}
             className={cn(
-              "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-dense font-medium transition-colors",
+              "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-dense font-medium transition-colors",
               active
-                ? "border-primary bg-primary/10 text-foreground"
+                ? "border-transparent bg-ink text-on-ink"
                 : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground",
             )}
           >

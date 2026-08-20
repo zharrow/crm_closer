@@ -70,7 +70,7 @@ export function NewLeadDialog() {
         <TooltipTrigger asChild>
           <DialogTrigger asChild>
             <Button size="sm">
-              <Plus size={16} animateOnHover />
+              <Plus size={16} />
               Ajouter
             </Button>
           </DialogTrigger>

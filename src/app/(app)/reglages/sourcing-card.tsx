@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { FieldStatus, useSaveField } from "./inline-field";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Circle, Loader2 } from "lucide-react";
@@ -75,7 +76,7 @@ export function SourcingCard({
   initialDismissed,
   yields,
   thresholds,
-  savedAt,
+
 }: {
   settings: Settings;
   initialSuggestions: QuerySuggestion[];
@@ -83,7 +84,6 @@ export function SourcingCard({
   yields: QueryYield[];
   thresholds: ThresholdOption[];
   /** Horodatage de la dernière sauvegarde réussie, 0 si aucune. */
-  savedAt: number;
 }) {
   const [queries, setQueries] = useState(() => splitQueries(settings.placesQueries));
   const [draft, setDraft] = useState("");
@@ -100,36 +100,40 @@ export function SourcingCard({
   const busy = pending || cycling;
 
   /**
-   * La référence, c'est ce qui a été enregistré — et on la tient
-   * localement.
+   * Tout s'enregistre au moment où on le change.
    *
-   * Comparer l'écran aux props du serveur rendait l'état du bouton
-   * dépendant d'un aller-retour : tant que les props ne revenaient pas
-   * rafraîchies, le bouton restait fermé alors que la sauvegarde avait
-   * réussi. On reprend donc l'écran comme référence dès que le
-   * formulaire confirme l'enregistrement.
+   * Cette carte tenait une « référence » de ce qui avait été enregistré, la
+   * comparait à l'écran, et en tirait un état « modifié » qui verrouillait
+   * le bouton de cycle — trente lignes pour rattraper le décalage entre ce
+   * qu'on voit et ce qui est en base. Le décalage n'existe plus : il n'y a
+   * plus de bouton « Enregistrer », donc plus d'écart possible entre les
+   * deux. La machinerie a été retirée avec lui.
+   *
+   * Trois réglages écrivent depuis ici, et chacun a son indicateur : on doit
+   * pouvoir dire lequel vient de partir.
    */
-  const [baseline, setBaseline] = useState(() => ({
-    queries: settings.placesQueries,
-    enabled: settings.sourcingEnabled,
-    threshold: settings.minEnrollScore,
-  }));
+  const enabledField = useSaveField("sourcingEnabled");
+  const queriesField = useSaveField("placesQueries");
+  const thresholdField = useSaveField("minEnrollScore");
 
-  useEffect(() => {
-    if (savedAt === 0) return;
-    setBaseline({ queries: queries.join("\n"), enabled, threshold });
-    // Volontairement sur `savedAt` seul : c'est l'instant de la
-    // sauvegarde qui fait référence, pas chaque frappe au clavier.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [savedAt]);
+  const changeEnabled = (next: boolean) => {
+    setEnabled(next);
+    void enabledField.save(next).then((stored) => {
+      if (stored === null) setEnabled(!next);
+    });
+  };
 
-  // Ce qui diverge, nommément : un « réglages modifiés » qui ne dit pas
-  // quoi ne sert à rien quand on croit avoir déjà enregistré.
-  const changes: string[] = [];
-  if (queries.join("\n") !== baseline.queries) changes.push("les requêtes");
-  if (enabled !== baseline.enabled) changes.push("le sourcing automatique");
-  if (threshold !== baseline.threshold) changes.push("le score minimum");
-  const dirty = changes.length > 0;
+  /* La liste part en bloc : c'est une seule colonne en base, et l'ajout
+     comme le retrait la réécrivent en entier. */
+  const commitQueries = (next: string[]) => {
+    setQueries(next);
+    void queriesField.save(next.join("\n"));
+  };
+
+  const changeThreshold = (next: number) => {
+    setThreshold(next);
+    void thresholdField.save(next);
+  };
 
   const addQuery = (value: string) => {
     const clean = value.trim();
@@ -138,7 +142,7 @@ export function SourcingCard({
       toast.info("Cette requête est déjà dans la liste.");
       return;
     }
-    setQueries((prev) => [...prev, clean]);
+    commitQueries([...queries, clean]);
   };
 
   const propose = () =>
@@ -270,23 +274,27 @@ export function SourcingCard({
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">Sourcing et entonnoir</CardTitle>
+      <CardHeader className="pb-4">
+        <CardTitle>Sourcing et entonnoir</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         {/* ---------------------------------------------------------- */}
         {/* Ce qu'on cherche                                            */}
         {/* ---------------------------------------------------------- */}
         <div className="flex flex-col gap-3">
-          <label className="flex items-center gap-2.5 text-sm">
+          <label className="flex flex-wrap items-center gap-2.5 text-dense">
             <input
               type="checkbox"
-              name="sourcingEnabled"
               checked={enabled}
-              onChange={(event) => setEnabled(event.target.checked)}
+              onChange={(event) => changeEnabled(event.target.checked)}
               className="h-4 w-4 rounded border-input"
             />
             Activer le sourcing automatique quotidien
+            <FieldStatus
+              status={enabledField.status}
+              error={enabledField.error}
+              className="ml-1"
+            />
           </label>
 
           <div
@@ -294,10 +302,12 @@ export function SourcingCard({
             aria-labelledby="requetes-titre"
             className="flex flex-col gap-1.5"
           >
-            <span id="requetes-titre" className="text-sm font-medium leading-none">
-              Requêtes
+            <span className="flex items-center gap-2">
+              <span id="requetes-titre" className="text-dense font-medium leading-none">
+                Requêtes
+              </span>
+              <FieldStatus status={queriesField.status} error={queriesField.error} />
             </span>
-            <input type="hidden" name="placesQueries" value={queries.join("\n")} />
 
             {queries.length > 0 && (
               /* Des étiquettes, pas des lignes de tableau : ce sont trois
@@ -327,9 +337,9 @@ export function SourcingCard({
                         className="h-5 w-5 rounded-full p-0 [&_svg]:size-3"
                         aria-label={`Retirer la requête ${query}`}
                         tooltip={`Retirer « ${query} ». Les leads déjà sourcés par cette requête sont conservés.`}
-                        onClick={() => setQueries((prev) => prev.filter((q) => q !== query))}
+                        onClick={() => commitQueries(queries.filter((q) => q !== query))}
                       >
-                        <X size={12} animateOnHover aria-hidden />
+                        <X size={12} aria-hidden />
                       </ActionButton>
                     </li>
                   );
@@ -360,7 +370,7 @@ export function SourcingCard({
                   setDraft("");
                 }}
               >
-                <Plus size={16} animateOnHover />
+                <Plus size={16} />
                 Ajouter
               </ActionButton>
             </div>
@@ -440,14 +450,18 @@ export function SourcingCard({
                 <Label htmlFor="minEnrollScore" className="shrink-0">
                   Score minimum pour inscrire
                 </Label>
+                <FieldStatus
+                  status={thresholdField.status}
+                  error={thresholdField.error}
+                  className="order-last"
+                />
                 <Input
                   id="minEnrollScore"
-                  name="minEnrollScore"
                   type="number"
                   min={0}
                   max={100}
                   value={threshold}
-                  onChange={(event) => setThreshold(Number(event.target.value))}
+                  onChange={(event) => changeThreshold(Number(event.target.value))}
                   className="h-9 w-20"
                 />
               </div>
@@ -467,11 +481,11 @@ export function SourcingCard({
                           <button
                             type="button"
                             aria-pressed={active}
-                            onClick={() => setThreshold(option.threshold)}
+                            onClick={() => changeThreshold(option.threshold)}
                             className={
                               active
-                                ? "rounded-md border border-primary bg-primary/10 px-2.5 py-1.5 text-xs font-medium tabular-nums"
-                                : "rounded-md border px-2.5 py-1.5 text-xs tabular-nums hover:bg-accent"
+                                ? "rounded-full bg-ink text-on-ink px-3 py-1.5 text-meta font-medium tabular-nums"
+                                : "rounded-full border px-3 py-1.5 text-meta tabular-nums hover:bg-accent"
                             }
                           >
                             <span className="font-medium">seuil {option.threshold}</span> →{" "}
@@ -515,7 +529,7 @@ export function SourcingCard({
                 action: "Demander",
               }}
             >
-              <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
+              <Sparkles size={16} animate={pending || undefined} loop={pending || undefined} />
               {pending ? "Recherche…" : "Proposer des requêtes"}
             </ActionButton>
             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
@@ -547,7 +561,7 @@ export function SourcingCard({
                       onClick={() => accept(suggestion)}
                       tooltip="Ajoute cette requête à la liste ci-dessus. Pense à enregistrer ensuite."
                     >
-                      <Plus size={16} animateOnHover />
+                      <Plus size={16} />
                       Ajouter
                     </ActionButton>
                     <ActionButton
@@ -559,7 +573,7 @@ export function SourcingCard({
                       onClick={() => dismiss(suggestion)}
                       tooltip="Écarte cette requête. Le modèle ne la reproposera plus."
                     >
-                      <X size={16} animateOnHover aria-hidden />
+                      <X size={16} aria-hidden />
                     </ActionButton>
                   </div>
                 </li>
@@ -595,7 +609,7 @@ export function SourcingCard({
                         onClick={() => restore(suggestion)}
                         tooltip="Remet cette requête dans les propositions."
                       >
-                        <RotateCcw size={16} animateOnHover aria-hidden />
+                        <RotateCcw size={16} aria-hidden />
                       </ActionButton>
                     </li>
                   ))}
@@ -613,15 +627,13 @@ export function SourcingCard({
             <ActionButton
               type="button"
               size="sm"
-              disabled={busy || dirty}
+              disabled={busy}
               onClick={runCycle}
-              tooltip={
-                dirty
-                  ? `Enregistre d'abord : ${changes.join(" et ")} ${
-                      changes.length > 1 ? "ont changé" : "a changé"
-                    } depuis la dernière sauvegarde.`
-                  : "Exécute tout de suite le cycle quotidien, sans attendre 5 h du matin."
-              }
+              /* Il était verrouillé tant que des réglages n'étaient pas
+                 enregistrés — le cycle travaille sur la base, pas sur
+                 l'écran. Tout étant écrit au fil de l'eau, les deux ne
+                 peuvent plus diverger et le verrou n'a plus d'objet. */
+              tooltip="Exécute tout de suite le cycle quotidien, sans attendre 5 h du matin."
               confirm={{
                 title: "Lancer le cycle maintenant ?",
                 description:
@@ -629,17 +641,15 @@ export function SourcingCard({
                 action: "Lancer le cycle",
               }}
             >
-              {cycling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play size={16} animateOnHover />}
+              {cycling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play size={16} />}
               {cycling ? "Cycle en cours…" : "Lancer le cycle maintenant"}
             </ActionButton>
           </div>
 
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {dirty
-              ? `Non enregistré : ${changes.join(" et ")} ${
-                  changes.length > 1 ? "ont changé" : "a changé"
-                }. Le cycle travaille sur les réglages en base, enregistre avant de lancer.`
-              : "Le cron tourne tout seul à 5 h UTC une fois le projet déployé. Ce bouton fait la même chose, à la demande. Le sourcing peut prendre une minute ou deux."}
+            Le cron tourne tout seul à 5 h UTC une fois le projet déployé. Ce bouton
+            fait la même chose, à la demande. Le sourcing peut prendre une minute ou
+            deux.
           </p>
 
           {steps && (

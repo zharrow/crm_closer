@@ -40,11 +40,22 @@ if (placeholder) {
  * l'app renvoie « canceling statement due to statement timeout ».
  * Mesuré : 3 requêtes concurrentes passent, 4 bloquent. Avec un pool,
  * chaque requête part sur sa propre connexion et le problème disparaît.
+ *
+ * `max: 8` et non 5 : la page la plus chargée en lance désormais cinq à la
+ * fois (le compteur de la barre, plus les quatre de la fiche prospect, qui
+ * partaient auparavant en trois vagues successives). À cinq exactement, la
+ * moindre requête supplémentaire se remet à attendre son tour — la marge
+ * est là pour ça, et une connexion de plus n'est ouverte que si elle sert.
+ *
+ * `idle_timeout: 60` et non 20 : ouvrir une connexion coûte ~280 ms, la
+ * requête elle-même ~35 ms. À vingt secondes, une pause dans la navigation
+ * suffisait à tout refermer, et la page suivante repayait l'établissement
+ * du lien — huit fois le prix de ce qu'elle venait chercher.
  */
 const client = postgres(connectionString, {
   prepare: false,
-  max: 5,
-  idle_timeout: 20,
+  max: 8,
+  idle_timeout: 60,
   connect_timeout: 10,
 });
 

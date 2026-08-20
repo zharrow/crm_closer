@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db, aiRuns, leadSignals, type Lead, type Settings } from "@/db/client";
 import { completeStructured } from "./anthropic";
 import { checkStyle, correctionHint, normalizeTypography } from "./style";
-import { remedyFor } from "./remedies";
+import { copyFor, enjeuFor } from "./signal-copy";
 import { inspectDraft } from "./guardrails";
 import {
   assemble,
@@ -119,12 +119,25 @@ function buildPrompt(
     facts.join("\n"),
     "",
     "Constats exploitables, du plus fort au plus faible.",
-    "Chacun est suivi de ce que l'expéditeur peut apporter pour y répondre :",
+    "Chacun porte ce qu'il coûte au destinataire, puis ce que l'expéditeur",
+    "peut apporter pour y répondre :",
     signals.length > 0
       ? signals
           .map((signal) => {
-            const remedy = remedyFor(signal.kind);
-            return remedy ? `- ${signal.label}\n  → il peut apporter : ${remedy}` : `- ${signal.label}`;
+            const copy = copyFor(signal.kind);
+            if (!copy) return `- ${signal.label}`;
+            /* L'enjeu passe par `enjeuFor` et non par `copy.enjeu` : certains
+               sont juridiques et ne valent qu'au-dessus d'un effectif. Le
+               modèle ne doit jamais recevoir un argument de droit qui ne
+               s'applique pas à ce prospect — il s'en servirait. */
+            const enjeu = enjeuFor(signal.kind, lead.headcount ?? null);
+            return [
+              `- ${signal.label}`,
+              enjeu && `  ce que ça lui coûte : ${enjeu}`,
+              `  → il peut apporter : ${copy.geste}`,
+            ]
+              .filter(Boolean)
+              .join("\n");
           })
           .join("\n")
       : "- aucun",

@@ -20,7 +20,15 @@ export function ScoreBadge({
   score: number;
   rationale: string | null;
 }) {
-  const badge = <Badge variant={scoreTone(score)}>{score}</Badge>;
+  /* `numeric` sur le badge lui-même et non sur la cellule qui l'accueille :
+     le même score s'affiche dans le tableau, dans la carte d'action et dans
+     l'en-tête de la fiche. Posé au point d'usage, il manquait deux fois
+     sur trois. */
+  const badge = (
+    <Badge variant={scoreTone(score)} className="numeric">
+      {score}
+    </Badge>
+  );
 
   if (!rationale) return badge;
 

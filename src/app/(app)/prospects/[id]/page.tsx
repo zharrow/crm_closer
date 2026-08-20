@@ -4,9 +4,10 @@ import { asc, desc, eq } from "drizzle-orm";
 import { ExternalLink } from "lucide-react";
 import { db, conversations, leadSignals, leads, messages, tasks } from "@/db/client";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, relativeDay, scoreTone } from "@/lib/utils";
-import { STATUS_LABEL, STATUS_VARIANT } from "../filters";
+import { Section } from "@/components/section";
+import { SignalDetail } from "@/components/signal-detail";
+import { LeadPipeline } from "@/components/lead-pipeline";
 import { LeadActions } from "./lead-actions";
 import { Conversation } from "./conversation";
 import { LeadNotes } from "./lead-notes";
@@ -47,49 +48,96 @@ export default async function LeadPage({
   // Valeur inconnue ou absente : la liste, qui reste le parent naturel.
   const origin = depuis === "file" ? ORIGINS.file : ORIGINS.liste;
 
-  const [lead] = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
-  if (!lead) notFound();
-
-  const [signals, history, conversation] = await Promise.all([
+  /**
+   * Les quatre requêtes partent ensemble, et non en trois vagues.
+   *
+   * La page allait chercher le lead, puis — une fois celui-ci arrivé — ses
+   * signaux, son historique et sa conversation, puis — une fois la
+   * conversation arrivée — les messages de cette conversation. Trois
+   * allers-retours Postgres empilés là où aucun n'a besoin du résultat du
+   * précédent : `id` vient de l'URL, il est connu dès la première ligne.
+   *
+   * Le fil de messages passait par l'identifiant de la conversation ; il se
+   * joint directement sur `lead_id`, qui est unique par conversation
+   * (`conversations_lead_key`). Une conversation au plus, donc aucune
+   * ligne dupliquée — et une vague au lieu de trois.
+   */
+  const [[lead], signals, history, thread] = await Promise.all([
+    db.select().from(leads).where(eq(leads.id, id)).limit(1),
     db
       .select()
       .from(leadSignals)
       .where(eq(leadSignals.leadId, id))
       .orderBy(desc(leadSignals.weight)),
     db.select().from(tasks).where(eq(tasks.leadId, id)).orderBy(desc(tasks.createdAt)),
-    db.select().from(conversations).where(eq(conversations.leadId, id)).limit(1),
+    db
+      .select({
+        id: messages.id,
+        conversationId: messages.conversationId,
+        role: messages.role,
+        channel: messages.channel,
+        body: messages.body,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .innerJoin(conversations, eq(conversations.id, messages.conversationId))
+      .where(eq(conversations.leadId, id))
+      .orderBy(asc(messages.createdAt)),
   ]);
 
-  const thread = conversation[0]
-    ? await db
-        .select()
-        .from(messages)
-        .where(eq(messages.conversationId, conversation[0].id))
-        .orderBy(asc(messages.createdAt))
-    : [];
+  if (!lead) notFound();
+
+  /**
+   * Les dates d'étape, prises dans ce que la page a déjà chargé.
+   *
+   * Aucune requête de plus pour dater la piste : `createdAt`,
+   * `enrichedAt` et `scoredAt` viennent de la fiche, l'inscription se lit
+   * à la première action créée pour ce prospect — `enrollLeadNow` crée
+   * l'inscription et cette action dans le même geste — et la réponse au
+   * premier message entrant. `history` descend des plus récentes aux plus
+   * anciennes, d'où `.at(-1)` ; `thread` monte, d'où `.find()`.
+   *
+   * `booked` n'y figure pas : la prise de RDV n'est horodatée nulle part
+   * en base. L'étape s'affiche sans date, ce qui est la seule chose
+   * honnête à en dire.
+   */
+  const firstTask = history.at(-1);
+  const firstReply = thread.find((message) => message.role === "prospect");
+
+  const pipelineDates = {
+    new: lead.createdAt,
+    enriched: lead.enrichedAt,
+    scored: lead.scoredAt,
+    enrolled: firstTask?.createdAt ?? null,
+    engaged: firstReply?.createdAt ?? null,
+  };
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <Link
           href={origin.href}
-          className="text-sm text-muted-foreground hover:underline underline-offset-4"
+          className="text-dense text-muted-foreground hover:underline underline-offset-4"
         >
           ← {origin.label}
         </Link>
 
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{lead.companyName}</h1>
-          <Badge variant={STATUS_VARIANT[lead.status] ?? "outline"}>
-            {STATUS_LABEL[lead.status] ?? lead.status}
-          </Badge>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <h1 className="display text-display text-balance">{lead.companyName}</h1>
+          {/* Le statut n'est plus une pastille ici : la piste, plus bas, le
+              dit en entier — où l'on en est, ce qui a été franchi, ce qui
+              reste. Le répéter en un mot au-dessus n'ajoutait rien et
+              entrait en concurrence avec le score, qui lui n'est écrit
+              qu'ici. */}
           {lead.score !== null && (
             <>
-              <Badge variant={scoreTone(lead.score)}>Score {lead.score}</Badge>
+              <Badge variant={scoreTone(lead.score)}>
+                Score <span className="numeric">{lead.score}</span>
+              </Badge>
               {/* Le détail répond à la question que le total masque :
                   gros prospect au site correct, ou petite structure sans
                   rien du tout ? Les deux peuvent faire 40. */}
-              <span className="text-xs tabular-nums text-muted-foreground">
+              <span className="numeric text-xs text-muted-foreground">
                 besoin {lead.needScore ?? "—"} · valeur {lead.valueScore ?? "—"}
                 {lead.reviewCount !== null && ` · ${lead.reviewCount} avis`}
               </span>
@@ -97,7 +145,7 @@ export default async function LeadPage({
           )}
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-dense text-muted-foreground">
           {lead.contactName && <span>{lead.contactName}</span>}
           {lead.email && <span>{lead.email}</span>}
           {lead.phone && <span>{lead.phone}</span>}
@@ -125,78 +173,70 @@ export default async function LeadPage({
         </div>
       </div>
 
+      <LeadPipeline status={lead.status} dates={pipelineDates} />
+
       <LeadActions leadId={lead.id} status={lead.status} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="flex flex-col gap-6">
           <Conversation leadId={lead.id} messages={thread} />
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Historique des actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {history.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Aucune action. Inscris ce prospect en séquence pour en générer.
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {history.map((task) => (
-                    <li key={task.id} className="flex flex-col gap-1 border-b pb-3 last:border-0 last:pb-0">
-                      <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <Badge variant="outline">{task.channel}</Badge>
-                        <span className="text-muted-foreground">
-                          {TASK_STATUS_LABEL[task.status] ?? task.status}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {task.doneAt
-                            ? formatDateTime(task.doneAt)
-                            : `échéance ${relativeDay(task.dueAt)}`}
-                        </span>
-                      </div>
-                      {task.error && (
-                        <p className="text-xs text-muted-foreground">{task.error}</p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          <Section title="Historique des actions" count={history.length}>
+            {history.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucune action. Inscris ce prospect en séquence pour en générer.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {history.map((task) => (
+                  <li key={task.id} className="flex flex-col gap-1 border-b pb-3 last:border-0 last:pb-0">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <Badge variant="outline">{task.channel}</Badge>
+                      <span className="text-muted-foreground">
+                        {TASK_STATUS_LABEL[task.status] ?? task.status}
+                      </span>
+                      {/* Une date se compare d'une ligne à l'autre : c'est
+                          de la donnée, elle prend le caractère technique. */}
+                      <span className="numeric text-xs text-muted-foreground">
+                        {task.doneAt
+                          ? formatDateTime(task.doneAt)
+                          : `échéance ${relativeDay(task.dueAt)}`}
+                      </span>
+                    </div>
+                    {task.error && (
+                      <p className="text-xs text-muted-foreground">{task.error}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
         </div>
 
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Signaux détectés</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {signals.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Aucun signal. Lance l&apos;enrichissement pour sonder le site.
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-2 text-sm">
-                  {signals.map((signal) => (
-                    <li key={signal.id} className="flex items-start justify-between gap-3">
-                      <span className="leading-relaxed">{signal.label}</span>
-                      <span className="shrink-0 tabular-nums text-muted-foreground">
-                        +{signal.weight}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          <Section title="Signaux détectés" count={signals.length}>
+            {signals.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aucun signal. Lance l&apos;enrichissement pour sonder le site.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {signals.map((signal) => (
+                  <SignalDetail
+                    key={signal.id}
+                    kind={signal.kind}
+                    label={signal.label}
+                    weight={signal.weight}
+                    headcount={lead.headcount}
+                  />
+                ))}
+              </ul>
+            )}
+          </Section>
 
           {(lead.siren || lead.headcount || lead.naf) && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Fiche légale</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-1.5 text-sm">
+            <Section title="Fiche légale">
+              <dl className="flex flex-col gap-1.5 text-sm">
                 {lead.siren && <Row label="SIREN" value={lead.siren} />}
                 {lead.naf && <Row label="NAF" value={lead.naf} />}
                 {lead.headcount != null && (
@@ -208,8 +248,8 @@ export default async function LeadPage({
                     value={new Date(lead.incorporatedAt).getFullYear().toString()}
                   />
                 )}
-              </CardContent>
-            </Card>
+              </dl>
+            </Section>
           )}
 
           <LeadNotes leadId={lead.id} notes={lead.notes ?? ""} />
@@ -222,8 +262,9 @@ export default async function LeadPage({
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium">{value}</span>
+      <dt className="text-muted-foreground">{label}</dt>
+      {/* SIREN, code NAF, effectif, année : de la donnée, pas de la prose. */}
+      <dd className="numeric font-medium">{value}</dd>
     </div>
   );
 }

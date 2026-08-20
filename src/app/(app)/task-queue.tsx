@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SectionHeading } from "@/components/section";
 import { TaskCard, type TaskCardData } from "./task-card";
 
 /** Même mécanisme que `ScrollMemory` : la place qu'on avait, rendue au retour. */
@@ -28,10 +29,10 @@ export function TaskQueue({
   late: TaskCardData[];
   today: TaskCardData[];
 }) {
-  // Le retard d'abord : c'est ce qui a déjà attendu.
-  const [openId, setOpenId] = useState<string | null>(
-    late[0]?.id ?? today[0]?.id ?? null,
-  );
+  // Tout replié à l'arrivée : on voit la journée entière avant d'en ouvrir
+  // une. Ouvrir la première d'office engageait un choix qu'on n'avait pas
+  // fait.
+  const [openId, setOpenId] = useState<string | null>(null);
 
   /**
    * On restaure après le premier rendu, pas pendant.
@@ -41,9 +42,9 @@ export function TaskQueue({
    * signalerait l'écart. Le prix est un rendu de plus, invisible.
    *
    * Sans ça, ouvrir la troisième action, aller voir la fiche du prospect et
-   * revenir rouvrait la première — alors que la position de défilement, elle,
-   * était bien rendue. On atterrissait donc au bon endroit devant la mauvaise
-   * carte.
+   * revenir refermait tout — alors que la position de défilement, elle,
+   * était bien rendue. On atterrissait donc au bon endroit devant une pile
+   * repliée.
    */
   useEffect(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -124,15 +125,16 @@ function GroupHeading({
   spaced?: boolean;
 }) {
   return (
-    <h2
-      className={`flex items-center gap-3 text-meta font-semibold uppercase tracking-wide ${
-        spaced ? "mt-5" : ""
-      } ${tone === "late" ? "text-destructive" : "text-muted-foreground"}`}
-    >
-      <span>
-        {label} · <span className="tabular-nums">{count}</span>
-      </span>
-      <span aria-hidden className="h-px flex-1 bg-border" />
-    </h2>
+    <SectionHeading
+      label={label}
+      count={count}
+      /* « Aujourd'hui » n'est pas un registre à part : c'est le cas
+         ordinaire. Seul le retard se signale. */
+      tone={tone === "late" ? "late" : "default"}
+      /* Le seul écart avec les autres sections de l'app : un groupe qui en
+         suit un autre a besoin d'air au-dessus. Le premier n'en a pas —
+         un filet qui ne sépare rien n'est qu'un trait. */
+      className={spaced ? "mt-5" : undefined}
+    />
   );
 }

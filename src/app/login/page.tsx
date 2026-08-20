@@ -11,13 +11,13 @@ export default async function LoginPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Prospection</h1>
+      <h1 className="display text-display">Prospection</h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Accès réservé. Le compte se crée depuis Supabase, pas ici.
       </p>
 
       {erreur === "non-autorise" && (
-        <p className="mt-6 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+        <p className="mt-6 rounded-2xl bg-tint-clay p-4 text-dense text-foreground">
           Ce compte n&apos;est pas autorisé à accéder à l&apos;outil.
         </p>
       )}

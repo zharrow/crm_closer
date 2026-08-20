@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { ScrollMemory } from "@/components/scroll-memory";
 import { and, asc, count, eq, gte, lte, sql } from "drizzle-orm";
-import { AlertTriangle, CheckCircle2, Inbox } from "lucide-react";
+import { AlertTriangle, CalendarCheck, CheckCircle2, Inbox, MessageSquare, Users } from "lucide-react";
 import { db, leads, tasks } from "@/db/client";
 import { getSettings, missingSettings } from "@/lib/settings";
 import { Card, CardContent } from "@/components/ui/card";
+import { Stat, StatRow } from "@/components/stat";
 import { TaskQueue } from "./task-queue";
 
 export const dynamic = "force-dynamic";
@@ -92,14 +93,17 @@ async function loadCounters() {
 function EmptyQueue({ doneToday, hasLeads }: { doneToday: number; hasLeads: boolean }) {
   if (doneToday > 0) {
     return (
-      <Card className="border-success/40 bg-success/5">
-        <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-          <CheckCircle2 className="h-8 w-8 text-success" aria-hidden />
-          <p className="font-medium">
+      /* Le seul moment de la journée qui mérite d'être marqué se rend en
+         ton plein, pas en teinte à 5 %. Zeste : le présent, ce qui est
+         acquis maintenant. */
+      <Card tone="zest">
+        <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+          <CheckCircle2 className="h-9 w-9" aria-hidden />
+          <p className="display text-headline">
             {doneToday} action{doneToday > 1 ? "s" : ""} envoyée
             {doneToday > 1 ? "s" : ""} aujourd&apos;hui. C&apos;est fini pour la journée.
           </p>
-          <p className="max-w-md leading-relaxed text-muted-foreground">
+          <p className="max-w-md text-body leading-relaxed opacity-80">
             Les relances programmées reviennent ici à leur date. Rien à surveiller
             d&apos;ici là.
           </p>
@@ -146,71 +150,11 @@ function EmptyQueue({ doneToday, hasLeads }: { doneToday: number; hasLeads: bool
   );
 }
 
-/**
- * Les compteurs, sur une ligne.
- *
- * Trois cartes de la largeur de la page occupaient la bande la plus lue de
- * l'écran — celle qu'on regarde en premier — pour trois nombres sur
- * lesquels il n'y a rien à faire, sur une page dont le titre annonce du
- * travail. La première action commençait à 340 px du haut ; elle démarre
- * maintenant à 150, et une deuxième entre dans le premier écran.
- *
- * Rien n'est retiré : les trois nombres sont là, toujours cliquables vers
- * leur liste filtrée. Ils ont seulement cessé d'être l'événement.
- */
-function Counters({
-  total,
-  engaged,
-  booked,
-}: {
-  total: number;
-  engaged: number;
-  booked: number;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t pt-3 text-meta text-muted-foreground">
-      <Counter label="leads" value={total} href="/prospects" />
-      <Separator />
-      <Counter label="ont répondu" value={engaged} href="/prospects?statut=engaged" />
-      <Separator />
-      <Counter label="RDV" value={booked} href="/prospects?statut=booked" />
-    </div>
-  );
-}
-
-/**
- * Le point médian n'est pas décoratif : il porte la séparation.
- *
- * La lisibilité de cette ligne ne tenait qu'au `gap` du conteneur. JSX ne
- * laisse aucune espace entre deux éléments écrits sur des lignes séparées :
- * que `display: flex` n'arrive pas — CSS pas encore chargé, feuille servie
- * en retard, rechargement à chaud à mi-course — et les compteurs se collent
- * en « 485 leads0 ont répondu0 RDV ». Un texte dont le sens dépend d'une
- * propriété de mise en page se casse chaque fois que cette propriété manque.
- *
- * Le séparateur, lui, est dans le contenu : la ligne reste lisible même sans
- * aucun style. Et c'est déjà la ponctuation de l'app — « besoin 40 · valeur
- * 30 », « site sans HTTPS · site non adapté au mobile ».
- *
- * `aria-hidden` parce qu'il ne se lit pas : chaque compteur est déjà un lien
- * distinct, annoncé séparément.
- */
-function Separator() {
-  return <span aria-hidden>·</span>;
-}
-
-function Counter({ label, value, href }: { label: string; value: number; href: string }) {
-  return (
-    <Link
-      href={href}
-      className="rounded transition-colors hover:text-foreground"
-    >
-      <span className="font-semibold tabular-nums text-foreground">{value}</span> {label}
-    </Link>
-  );
-}
-
 export default async function TodayPage() {
+  /* Quatre requêtes concurrentes ici, plus une pour le rail. Toute requête
+     ajoutée à ce `Promise.all` doit être comptée sur le total de la page, pas
+     sur celui de sa fonction — un compteur posé sans ce calcul a déjà suffi
+     à faire échouer la file. */
   const [dueTasks, counters, settings] = await Promise.all([
     loadDueTasks(),
     loadCounters(),
@@ -231,29 +175,53 @@ export default async function TodayPage() {
   return (
     <div className="flex flex-col gap-8">
       <ScrollMemory />
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">À faire aujourd&apos;hui</h1>
-        <p className="mt-1.5 text-muted-foreground">
-          {dueTasks.length > 0
-            ? `${dueTasks.length} action${dueTasks.length > 1 ? "s" : ""} en attente${
-                late.length > 0 ? ` — ${late.length} en retard` : ""
-              }. Tu copies, tu envoies, tu marques.`
-            : "Rien en attente. Les relances programmées apparaîtront ici à leur date."}
-        </p>
-        <Counters
-          total={counters.total}
-          engaged={counters.engaged}
-          booked={counters.booked}
-        />
+      {/* Titre à gauche, chiffres à droite : la ligne de tête des deux
+          références. Le titre passe de 24 à 45 px — c'est le levier le
+          moins cher de toute la direction artistique, et celui qu'on
+          n'ose jamais tirer. */}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
+        <div className="min-w-0">
+          <h1 className="display text-display">À faire aujourd&apos;hui</h1>
+          <p className="mt-3 max-w-xl text-body text-muted-foreground">
+            {dueTasks.length > 0
+              ? `${dueTasks.length} action${dueTasks.length > 1 ? "s" : ""} en attente${
+                  late.length > 0 ? ` — ${late.length} en retard` : ""
+                }. Tu copies, tu envoies, tu marques.`
+              : "Rien en attente. Les relances programmées apparaîtront ici à leur date."}
+          </p>
+        </div>
+        <StatRow>
+          <Stat
+            icon={Users}
+            chip="bg-chip-neutral text-on-chip-neutral"
+            label="leads"
+            value={counters.total}
+            href="/prospects"
+          />
+          <Stat
+            icon={MessageSquare}
+            chip="bg-chip-email text-on-chip-email"
+            label="ont répondu"
+            value={counters.engaged}
+            href="/prospects?statut=engaged"
+          />
+          <Stat
+            icon={CalendarCheck}
+            chip="bg-zest text-on-zest"
+            label="RDV"
+            value={counters.booked}
+            href="/prospects?statut=booked"
+          />
+        </StatRow>
       </div>
 
       {missing.length > 0 && (
-        <Card className="border-warning/40 bg-warning/5">
-          <CardContent className="flex items-start gap-3 p-4 text-sm">
-            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+        <Card tone="amber">
+          <CardContent className="flex items-start gap-3 p-5 text-dense">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
             <p className="leading-relaxed">
               Il manque {missing.join(", ")} dans les{" "}
-              <Link href="/reglages" className="font-medium underline underline-offset-2">
+              <Link href="/reglages" className="font-semibold underline underline-offset-2">
                 réglages
               </Link>
               . Les messages seront rédigés sans ces éléments, donc plus faibles.
@@ -267,6 +235,7 @@ export default async function TodayPage() {
       ) : (
         <TaskQueue late={late} today={today} />
       )}
+
     </div>
   );
 }

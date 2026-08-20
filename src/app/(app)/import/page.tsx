@@ -7,7 +7,7 @@ export default function ImportPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Import CSV</h1>
+        <h1 className="display text-display">Import CSV</h1>
         <p className="mt-1.5 text-muted-foreground">
           Une ligne par entreprise. Seule la colonne du nom est obligatoire.
         </p>

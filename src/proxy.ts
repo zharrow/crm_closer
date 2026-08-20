@@ -50,12 +50,19 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // Ne pas insérer de logique entre createServerClient et getUser :
+  // Ne pas insérer de logique entre createServerClient et la vérification :
   // le rafraîchissement du jeton se joue ici, et une session non
   // rafraîchie déconnecte l'utilisateur de façon aléatoire.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  //
+  // `getClaims()` et non `getUser()` : le proxy tourne sur *chaque*
+  // requête, y compris chaque navigation client et chaque préchargement.
+  // `getUser()` y ajoutait un aller-retour vers le serveur d'auth
+  // Supabase — 90 à 250 ms mesurés — avant que le rendu ne commence.
+  // Les jetons du projet étant signés en ES256, la signature se vérifie
+  // en local contre un JWKS mis en cache pour tout le processus. Voir
+  // `lib/supabase/server.ts` pour le détail.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims ?? null;
 
   const { pathname } = request.nextUrl;
 

@@ -13,7 +13,7 @@ export default function AppNotFound() {
     <div className="flex flex-col items-center gap-4 py-20 text-center">
       <SearchX className="h-8 w-8 text-muted-foreground" aria-hidden />
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">
+        <h1 className="display text-headline">
           Cette page n&apos;existe pas
         </h1>
         <p className="mx-auto mt-2 max-w-md leading-relaxed text-muted-foreground">

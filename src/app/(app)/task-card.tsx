@@ -16,6 +16,7 @@ import { X } from "@/components/animate-ui/icons/x";
 /* Les quatre canaux, tous animés : le canal se reconnaît d'abord à sa forme,
    autant que cette forme réagisse. `Mail` est écrite à la main — le registre
    Animate UI n'a aucune icône d'email. */
+import { AnimateIcon } from "@/components/animate-ui/icons/icon";
 import { Mail } from "@/components/animate-ui/icons/mail";
 import { PhoneCall } from "@/components/animate-ui/icons/phone-call";
 import { Link2 } from "@/components/animate-ui/icons/link-2";
@@ -26,6 +27,7 @@ import { Badge, badgeVariants } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useExpandTransition } from "@/hooks/use-expand-transition";
 import { channelTone, cn, relativeDay, scoreTone } from "@/lib/utils";
 import { readTaskError } from "@/lib/task-error";
 import { draftTaskNow, markTaskDone, saveTaskDraft, skipTask, snoozeTask } from "./actions";
@@ -83,7 +85,7 @@ function TaskNotice({ raw, hasDraft }: { raw: string; hasDraft: boolean }) {
 
   if (notice.kind === "etat") {
     return (
-      <p className="flex items-start gap-2 rounded-md border bg-muted/40 p-3 text-meta leading-relaxed">
+      <p className="flex items-start gap-2 rounded-2xl bg-muted p-4 text-meta leading-relaxed">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
         {notice.title}
       </p>
@@ -92,7 +94,7 @@ function TaskNotice({ raw, hasDraft }: { raw: string; hasDraft: boolean }) {
 
   if (notice.kind === "avertissement") {
     return (
-      <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-meta leading-relaxed">
+      <div className="flex items-start gap-2 rounded-2xl bg-tint-amber p-4 text-meta leading-relaxed">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
         <p>
           <span className="font-medium">{notice.title}</span>
@@ -103,7 +105,7 @@ function TaskNotice({ raw, hasDraft }: { raw: string; hasDraft: boolean }) {
   }
 
   return (
-    <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-meta leading-relaxed">
+    <div className="flex items-start gap-2 rounded-2xl bg-tint-amber p-4 text-meta leading-relaxed">
       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden />
       <div className="min-w-0 flex-1">
         {/* Au passé, explicitement : ce n'est pas un contrôle en direct. */}
@@ -152,6 +154,9 @@ export function TaskCard({
   const [subject, setSubject] = useState(task.subject ?? "");
   const [body, setBody] = useState(task.body ?? "");
   const [pending, startTransition] = useTransition();
+  /* `capture` relève la disposition du bandeau avant que React ne la
+     remplace : c'est de là que part le dépli. */
+  const { ref: cardRef, capture } = useExpandTransition(expanded);
 
   const meta = CHANNEL_META[task.channel] ?? CHANNEL_META.email;
   const Icon = meta.icon;
@@ -220,26 +225,46 @@ export function TaskCard({
   // dès que la carte est ouverte.
   if (!expanded) {
     return (
-      <Card>
+      <Card ref={cardRef}>
+        {/* Toute la ligne déclenche : viser le chevron ou la pastille n'a
+            aucune raison d'être demandé pour une simple mise en évidence. */}
         {/* `aria-controls` n'est pas posé ici : le panneau qu'il désignerait
             n'existe pas tant que la carte est repliée, et pointer vers un
             identifiant absent est pire que de ne rien pointer. `aria-expanded`
             suffit à annoncer l'état, c'est le motif habituel d'un accordéon.
             Les pastilles sont des `span` et non des `Badge` : ce dernier rend
             un `div`, et un `div` dans un `button` n'est pas du HTML valide. */}
+        <AnimateIcon animateOnHover asChild>
         <button
           type="button"
-          onClick={onToggle}
+          /* Relever avant de basculer : après, l'ancienne disposition n'existe
+             plus nulle part. */
+          onClick={() => {
+            capture();
+            onToggle();
+          }}
           aria-expanded={false}
-          className="flex w-full flex-wrap items-center gap-2 rounded-xl px-4 py-3 text-left transition-colors hover:bg-accent/40"
+          className="flex w-full flex-wrap items-center gap-2.5 rounded-panel px-5 py-4 text-left transition-colors hover:bg-accent/60"
         >
-          <span className={cn(badgeVariants({ variant: channelTone(task.channel) }), "gap-1")}>
-            <Icon size={13} animateOnHover />
+          {/* Les `data-flip-id` apparient les deux états. Ils ne sont pas
+              décoratifs : sans eux, le bandeau est remplacé par l'en-tête au
+              lieu de le devenir. Toute pièce qui existe des deux côtés en
+              porte un, et le même des deux côtés. */}
+          <span
+            data-flip-id="canal"
+            className={cn(badgeVariants({ variant: channelTone(task.channel) }), "gap-1")}
+          >
+            <Icon size={13} />
             <span className="sr-only sm:not-sr-only">{meta.label}</span>
           </span>
-          <span className="font-semibold">{task.companyName}</span>
+          <span data-flip-id="nom" className="display text-title">
+            {task.companyName}
+          </span>
           {task.score !== null && (
-            <span className={cn(badgeVariants({ variant: scoreTone(task.score) }))}>
+            <span
+              data-flip-id="score"
+              className={cn(badgeVariants({ variant: scoreTone(task.score) }), "numeric")}
+            >
               {task.score}
             </span>
           )}
@@ -251,6 +276,7 @@ export function TaskCard({
             </span>
           )}
           <span
+            data-flip-id="echeance"
             className={
               late
                 ? "ml-auto text-meta text-destructive"
@@ -259,22 +285,45 @@ export function TaskCard({
           >
             {relativeDay(task.dueAt)}
           </span>
-          <ChevronDown size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+          {/* Hors de Flip : apparié aux deux bouts, le chevron passait par
+              tous les angles intermédiaires en changeant de place, et une
+              flèche à quarante-cinq degrés ne ressemble plus à rien. Il ne
+              fait plus que pivoter, sur place. */}
+          {/* Même empreinte que le bouton de repli, `-my-2` compris : c'est
+              lui qui fixe où s'arrête l'échéance. Sans ça elle glissait de
+              quarante-six pixels à l'ouverture, poussée par un chevron deux
+              fois plus large que celui d'en face. */}
+          <span className="-my-2 inline-flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground">
+            <span data-chevron className="inline-flex">
+              <ChevronDown size={16} aria-hidden />
+            </span>
+          </span>
         </button>
+        </AnimateIcon>
       </Card>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="gap-3 pb-4">
+    /* `overflow-hidden` : l'en-tête est un aplat plein qui doit épouser le
+       rayon du panneau. Sans lui, l'encre déborde aux quatre coins. */
+    <Card ref={cardRef} className="overflow-hidden">
+      {/* L'action ouverte porte un en-tête encre — c'est la seule de la file,
+          et c'est ce qui la désigne d'un bout à l'autre de l'écran. Le corps
+          reste blanc : on y écrit, et on n'écrit pas sur du noir. */}
+      {/* `pt-4` et non `p-5` : c'est le retrait du bandeau replié, au pixel.
+          Une première ligne qui descend de quatre pixels en s'ouvrant se voit,
+          même sans qu'on sache dire quoi. */}
+      <CardHeader className="on-tone gap-3 bg-ink px-5 pb-5 pt-4 text-on-ink">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant={channelTone(task.channel)} className="gap-1">
+          <Badge data-flip-id="canal" variant={channelTone(task.channel)} className="gap-1">
             <Icon size={13} animateOnHover />
             {meta.label}
           </Badge>
           {task.stepPosition && (
-            <Badge variant="outline">Étape {task.stepPosition}</Badge>
+            <Badge data-reveal variant="outline" className="border-on-ink/35 text-on-ink">
+              Étape {task.stepPosition}
+            </Badge>
           )}
           {/* `depuis=file` sert au lien de retour de la fiche : sans lui, il
               renvoyait toujours vers la liste des prospects, y compris quand
@@ -282,30 +331,62 @@ export function TaskCard({
               du navigateur — comme ça le retour reste juste après un
               rechargement, ou si le lien est rouvert depuis un onglet. */}
           <Link
+            data-flip-id="nom"
             href={`/prospects/${task.leadId}?depuis=file`}
-            className="font-semibold hover:underline underline-offset-4"
+            className="display text-title hover:underline underline-offset-4"
           >
             {task.companyName}
           </Link>
           {task.score !== null && (
-            <Badge variant={scoreTone(task.score)}>{task.score}</Badge>
+            <Badge data-flip-id="score" variant={scoreTone(task.score)} className="numeric">
+              {task.score}
+            </Badge>
           )}
-          <span className={late ? "text-meta text-destructive" : "text-meta text-muted-foreground"}>
-            {relativeDay(task.dueAt)}
-          </span>
+          {/* Le retard se rend en pastille et non en texte coloré. Une
+              encre posée sur un aplat de ton doit être mesurée contre cet
+              aplat, et le ton argile n'y tenait que 6,3:1 en sombre — sous
+              le plancher. La pastille, elle, porte son propre fond : elle
+              est juste par construction, sur n'importe quelle surface. */}
+          {/* `ml-auto` des deux côtés : l'échéance se lit toujours au bord
+              droit. Posée ici après le score, elle traversait trois cent
+              soixante pixels à chaque ouverture — un déplacement que rien ne
+              justifiait, et qu'on suivait des yeux pour rien. */}
+          {late ? (
+            <Badge data-flip-id="echeance" className="ml-auto" variant="destructive">
+              {relativeDay(task.dueAt)}
+            </Badge>
+          ) : (
+            <span data-flip-id="echeance" className="ml-auto text-meta text-on-ink/70">
+              {relativeDay(task.dueAt)}
+            </span>
+          )}
           <button
             type="button"
-            onClick={onToggle}
+            onClick={() => {
+              capture();
+              onToggle();
+            }}
             aria-expanded
             aria-controls={panelId}
-            className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
+            /* `-my-2` : la cible reste à 40,5 px, mais elle cesse de dicter
+               la hauteur de la rangée. Sans ça la ligne entière descend de
+               sept pixels par rapport au bandeau. */
+            className="-my-2 inline-flex h-9 w-9 items-center justify-center rounded-full text-on-ink/70 transition-colors hover:bg-on-ink/15 hover:text-on-ink"
           >
-            <ChevronDown size={16} className="rotate-180" aria-hidden />
+            {/* Le demi-tour est sur le `<svg>`, l'enveloppe est libre : c'est
+                elle que GSAP fait pivoter, en partant de l'orientation qu'avait
+                l'autre chevron. Les deux sur le même nœud se cumuleraient. */}
+            <span data-chevron className="inline-flex">
+              <ChevronDown size={16} className="rotate-180" aria-hidden />
+            </span>
             <span className="sr-only">Replier l&apos;action pour {task.companyName}</span>
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <div
+          data-reveal
+          className="flex flex-wrap items-center gap-x-4 gap-y-1 text-meta text-on-ink/70"
+        >
           {task.contactName && <span>{task.contactName}</span>}
           {task.channel === "email" && task.email && <span>{task.email}</span>}
           {task.channel === "phone" && task.phone && <span>{task.phone}</span>}
@@ -332,13 +413,15 @@ export function TaskCard({
         </div>
 
         {task.scoreRationale && (
-          <p className="text-xs leading-relaxed text-muted-foreground">{task.scoreRationale}</p>
+          <p data-reveal className="text-meta leading-relaxed text-on-ink/70">
+            {task.scoreRationale}
+          </p>
         )}
       </CardHeader>
 
-      <CardContent id={panelId} className="flex flex-col gap-4">
+      <CardContent data-reveal id={panelId} className="flex flex-col gap-4 p-5 pt-5">
         {staleUnsubscribe && (
-          <p className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-meta leading-relaxed">
+          <p className="flex items-start gap-2 rounded-2xl bg-tint-clay p-4 text-meta leading-relaxed">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
             <span>
               <span className="font-medium">
@@ -354,7 +437,7 @@ export function TaskCard({
         {task.error && <TaskNotice raw={task.error} hasDraft={Boolean(task.body)} />}
 
         {task.status === "pending" || !task.body ? (
-          <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed p-6">
+          <div className="flex flex-col items-start gap-3 rounded-2xl border-2 border-dashed p-6">
             <p className="text-sm text-muted-foreground">
               Aucun brouillon pour cette action.
             </p>
@@ -370,7 +453,7 @@ export function TaskCard({
                 action: "Rédiger",
               }}
             >
-              <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
+              <Sparkles size={16} animate={pending || undefined} loop={pending || undefined} />
               {pending ? "Rédaction…" : "Rédiger le message"}
             </ActionButton>
           </div>
@@ -411,7 +494,7 @@ export function TaskCard({
                 size="sm"
                 tooltip="Copie le message dans le presse-papier. Rien n'est envoyé ni modifié."
               >
-                <Copy size={16} animateOnHover />
+                <Copy size={16} />
                 Copier
               </ActionButton>
               <ActionButton
@@ -426,7 +509,7 @@ export function TaskCard({
                   action: "J'ai envoyé, marquer fait",
                 }}
               >
-                <Check size={16} animateOnHover />
+                <Check size={16} />
                 Marquer envoyé
               </ActionButton>
               {dirty && (
@@ -453,7 +536,7 @@ export function TaskCard({
                   action: "Régénérer",
                 }}
               >
-                <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
+                <Sparkles size={16} animate={pending || undefined} loop={pending || undefined} />
                 Régénérer
               </ActionButton>
 
@@ -471,7 +554,7 @@ export function TaskCard({
                     action: "Reporter",
                   }}
                 >
-                  <Clock size={16} animateOnHover />
+                  <Clock size={16} />
                   +3 j
                 </ActionButton>
                 <ActionButton
@@ -489,7 +572,7 @@ export function TaskCard({
                     destructive: true,
                   }}
                 >
-                  <X size={16} animateOnHover aria-hidden />
+                  <X size={16} aria-hidden />
                 </ActionButton>
               </div>
             </div>

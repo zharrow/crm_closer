@@ -1,5 +1,35 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * `tailwind-merge` doit connaître notre échelle, sinon il la prend pour des
+ * couleurs.
+ *
+ * Il départage deux classes `text-*` en devinant leur nature : une taille de
+ * la gamme t-shirt (`sm`, `lg`, `2xl`…) va dans le groupe « corps », tout le
+ * reste dans le groupe « couleur ». Nos jetons ne sont ni l'un ni l'autre à
+ * ses yeux — `text-dense` et `text-on-cobalt` atterrissaient donc tous les
+ * deux dans « couleur », où ils se sont considérés en conflit. Le dernier
+ * écrit gagnait, et le bouton principal perdait sa couleur de texte : de
+ * l'encre sombre sur du cobalt, 1,3:1, illisible.
+ *
+ * Le symptôme est silencieux — pas d'erreur, pas d'avertissement, juste une
+ * classe qui disparaît du DOM. Il ne s'est vu qu'en regardant le rendu.
+ *
+ * Déclarer l'échelle règle les deux sens à la fois : une taille chasse une
+ * taille, une couleur chasse une couleur, et les deux cohabitent. **Tout
+ * nouveau jeton `--text-*` dans `globals.css` doit être ajouté ici**, sans
+ * quoi il se remettra à voler la couleur de ce qu'il accompagne.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [
+        { text: ["meta", "dense", "body", "title", "stat", "headline", "display"] },
+      ],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

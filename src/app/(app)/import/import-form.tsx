@@ -176,7 +176,7 @@ export function ImportForm() {
               disabled={pending}
               tooltip="Crée les prospects du fichier. Les doublons et les lignes sans nom d'entreprise sont ignorés."
             >
-              <Upload size={16} animate={pending} loop={pending} animateOnHover={!pending} />
+              <Upload size={16} animate={pending || undefined} loop={pending || undefined} />
               {pending ? "Import…" : `Importer ${rows.length} prospects`}
             </ActionButton>
             <ActionButton

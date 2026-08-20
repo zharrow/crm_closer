@@ -44,7 +44,7 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
         }}
         onClick={() => run(() => enrichLeadNow(leadId), "Enrichissement terminé")}
       >
-        <RefreshCw size={16} animate={pending} loop={pending} animateOnHover={!pending} />
+        <RefreshCw size={16} animate={pending || undefined} loop={pending || undefined} />
         Enrichir
       </ActionButton>
 
@@ -61,7 +61,7 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
           }}
           onClick={() => run(() => enrollLeadNow(leadId), "Inscrit — première action dans ta file")}
         >
-          <Play size={16} animateOnHover />
+          <Play size={16} />
           Inscrire en séquence
         </ActionButton>
       )}
@@ -148,7 +148,7 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
           }}
           onClick={() => run(() => markLost(leadId), "Marqué perdu")}
         >
-          <ThumbsDown size={16} animateOnHover />
+          <ThumbsDown size={16} />
           Perdu
         </ActionButton>
         <ActionButton

@@ -137,7 +137,7 @@ export function Conversation({
                 action: "Proposer une réponse",
               }}
             >
-              <Sparkles size={16} animate={pending} loop={pending} animateOnHover={!pending} />
+              <Sparkles size={16} animate={pending || undefined} loop={pending || undefined} />
               {pending ? "Réflexion…" : "Proposer une réponse"}
             </ActionButton>
           </div>
@@ -155,7 +155,7 @@ export function Conversation({
             </div>
 
             {warnings.length > 0 && (
-              <p className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/5 p-3 text-xs leading-relaxed">
+              <p className="flex items-start gap-2 rounded-2xl bg-tint-amber p-4 text-meta leading-relaxed">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" />
                 Le brouillon contient : {warnings.join(", ")}. Relis-le avant d&apos;envoyer.
               </p>
@@ -175,7 +175,7 @@ export function Conversation({
                 onClick={copyDraft}
                 tooltip="Copie le brouillon dans le presse-papier. Rien n'est envoyé ni enregistré."
               >
-                <Copy size={16} animateOnHover />
+                <Copy size={16} />
                 Copier
               </ActionButton>
               <ActionButton
@@ -190,7 +190,7 @@ export function Conversation({
                   action: "J'ai envoyé, archiver",
                 }}
               >
-                <Send size={16} animateOnHover />
+                <Send size={16} />
                 Je l&apos;ai envoyé
               </ActionButton>
             </div>
