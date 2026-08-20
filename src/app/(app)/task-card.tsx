@@ -275,13 +275,20 @@ export function TaskCard({
               Modifié, non enregistré
             </span>
           )}
+          {/* Le rembourrage d'une pastille, sans la pastille.
+
+              Dépliée, l'échéance devient une pastille — elle porte son fond
+              pour tenir sur l'aplat encre. Sa bordure droite reste au même
+              endroit, mais son texte, lui, rentre de onze pixels : c'était le
+              dernier morceau qui se déplaçait en s'ouvrant. En réservant ici
+              la même place, le texte ne bouge plus du tout et le fond se
+              contente d'apparaître autour de lui. */}
           <span
             data-flip-id="echeance"
-            className={
-              late
-                ? "ml-auto text-meta text-destructive"
-                : "ml-auto text-meta text-muted-foreground"
-            }
+            className={cn(
+              "ml-auto inline-flex items-center px-2.5 py-0.5 text-meta",
+              late ? "text-destructive" : "text-muted-foreground",
+            )}
           >
             {relativeDay(task.dueAt)}
           </span>
@@ -333,16 +340,13 @@ export function TaskCard({
         />
         {/* `relative` sur les rangs : une pièce positionnée se peint au-dessus
             du texte en flux, donc le voile passerait devant elles. */}
-        <div className="relative flex flex-wrap items-center gap-2">
+        {/* `gap-2.5`, la gouttière du bandeau replié : à `gap-2` le nom et le
+            score se décalaient encore de deux pixels en s'ouvrant. */}
+        <div className="relative flex flex-wrap items-center gap-2.5">
           <Badge data-flip-id="canal" variant={channelTone(task.channel)} className="gap-1">
             <Icon size={13} animateOnHover />
             {meta.label}
           </Badge>
-          {task.stepPosition && (
-            <Badge data-reveal variant="outline" className="border-on-ink/35 text-on-ink">
-              Étape {task.stepPosition}
-            </Badge>
-          )}
           {/* `depuis=file` sert au lien de retour de la fiche : sans lui, il
               renvoyait toujours vers la liste des prospects, y compris quand
               on arrivait d'ici. Un marqueur dans l'URL plutôt que l'historique
@@ -365,16 +369,39 @@ export function TaskCard({
               aplat, et le ton argile n'y tenait que 6,3:1 en sombre — sous
               le plancher. La pastille, elle, porte son propre fond : elle
               est juste par construction, sur n'importe quelle surface. */}
-          {/* `ml-auto` des deux côtés : l'échéance se lit toujours au bord
-              droit. Posée ici après le score, elle traversait trois cent
-              soixante pixels à chaque ouverture — un déplacement que rien ne
-              justifiait, et qu'on suivait des yeux pour rien. */}
+          {/* L'étape rejoint le bord droit, avec l'échéance : ce sont deux
+              renseignements sur l'action, pas sur le prospect. Glissée entre
+              la pastille du canal et le nom, elle poussait le nom et le score
+              de soixante-dix-sept pixels — les deux seules pièces qui
+              n'avaient aucune raison de bouger en s'ouvrant. Elles ne bougent
+              plus du tout : le bandeau est devenu l'en-tête sans que rien
+              n'ait changé de place. */}
+          {task.stepPosition && (
+            <Badge
+              data-reveal
+              variant="outline"
+              className="ml-auto border-on-ink/35 text-on-ink"
+            >
+              Étape {task.stepPosition}
+            </Badge>
+          )}
+          {/* L'échéance se lit toujours au bord droit, repliée comme dépliée.
+              `ml-auto` ne lui revient que si l'étape ne l'a pas pris : deux
+              marges automatiques dans une même rangée se partagent l'espace
+              libre et sépareraient les deux pastilles. */}
           {late ? (
-            <Badge data-flip-id="echeance" className="ml-auto" variant="destructive">
+            <Badge
+              data-flip-id="echeance"
+              className={cn(!task.stepPosition && "ml-auto")}
+              variant="destructive"
+            >
               {relativeDay(task.dueAt)}
             </Badge>
           ) : (
-            <span data-flip-id="echeance" className="ml-auto text-meta text-on-ink/70">
+            <span
+              data-flip-id="echeance"
+              className={cn(!task.stepPosition && "ml-auto", "text-meta text-on-ink/70")}
+            >
               {relativeDay(task.dueAt)}
             </span>
           )}

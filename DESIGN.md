@@ -906,21 +906,36 @@ Deux pièges de couleur, tous deux invisibles en lecture de code :
   qui change vraiment : les pastilles du canal et du score ont la même couleur
   des deux côtés, on les laisse tranquilles.
 
-**Trois choses ne doivent pas bouger en s'ouvrant**, et chacune a coûté un
-aller-retour :
+**Rien ne bouge en s'ouvrant.** C'est l'état d'arrivée, et il a coûté cinq
+allers-retours : le canal, le nom, le score et le chevron sont au pixel près à
+la même place dans les deux états, l'échéance à un pixel. La carte ne se
+réorganise pas, elle change de surface — Flip ne reste là que comme filet,
+pour les cas où la mise en page décale quand même quelque chose.
 
-- **la première ligne ne descend pas.** L'en-tête porte `pt-4`, le retrait du
-  bandeau, et non le `p-5` de ses trois autres côtés ; le bouton de repli
-  porte `-my-2` pour garder sa cible de 40,5 px sans dicter la hauteur de la
-  rangée. Sans ces deux-là, la ligne descend de 11,5 px.
-- **l'échéance reste au bord droit**, `ml-auto` des deux côtés. Posée après le
-  score dans l'en-tête, elle traversait 361 px à chaque ouverture.
-- **le chevron reste à sa place.** Les deux états lui donnent la même
-  empreinte de 40,5 px — c'est elle qui fixe où s'arrête l'échéance. Apparié
-  par Flip, il changeait de place *et* d'angle : il passait par tous les
-  degrés intermédiaires, et une flèche à quarante-cinq degrés a l'air cassée.
-  Le demi-tour au repos est sur le `<svg>`, la rotation animée sur
-  l'enveloppe : sur le même nœud, ils se cumuleraient.
+Ce que ça impose, et qu'on ne peut pas défaire sans que le mouvement revienne :
+
+- **l'en-tête porte `pt-4`**, le retrait du bandeau, et non le `p-5` de ses
+  trois autres côtés ; le bouton de repli porte `-my-2` pour garder sa cible
+  de 40,5 px sans dicter la hauteur de la rangée. Sans ces deux-là, la
+  première ligne descend de 11,5 px.
+- **la gouttière est `gap-2.5` des deux côtés.** À `gap-2` dans l'en-tête, le
+  nom et le score se décalaient de deux pixels.
+- **ce qui décrit l'action va à droite** : l'étape rejoint l'échéance, avec
+  `ml-auto` — glissée entre le canal et le nom, elle poussait les deux pièces
+  qui n'ont aucune raison de bouger, de soixante-dix-sept pixels. `ml-auto`
+  ne revient à l'échéance que si l'étape ne l'a pas pris : deux marges
+  automatiques dans une rangée se partagent l'espace libre et sépareraient
+  les deux pastilles.
+- **le bandeau réserve le rembourrage de la pastille** (`px-2.5 py-0.5` sur
+  une échéance sans fond). Dépliée elle devient une pastille, pour tenir sur
+  l'aplat encre ; sans cette réserve, son texte rentrait de onze pixels et
+  c'était le dernier morceau qui se déplaçait.
+- **le chevron a la même empreinte de 40,5 px des deux côtés** — c'est elle
+  qui fixe où s'arrête l'échéance. Apparié par Flip, il changeait de place
+  *et* d'angle : il passait par tous les degrés intermédiaires, et une flèche
+  à quarante-cinq degrés a l'air cassée. Le demi-tour au repos est sur le
+  `<svg>`, la rotation animée sur l'enveloppe : sur le même nœud, ils se
+  cumuleraient.
 
 ### Une contrainte qui n'est pas du design mais qui le borne
 
