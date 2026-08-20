@@ -155,8 +155,10 @@ export function TaskCard({
   const [body, setBody] = useState(task.body ?? "");
   const [pending, startTransition] = useTransition();
   /* `capture` relève la disposition du bandeau avant que React ne la
-     remplace : c'est de là que part le dépli. */
-  const { ref: cardRef, capture } = useExpandTransition(expanded);
+     remplace : c'est de là que part le dépli. `shown` et non `expanded`
+     décide de ce qui est rendu — au repli, le panneau survit à la demande le
+     temps de se refermer. */
+  const { ref: cardRef, capture, shown } = useExpandTransition(expanded);
 
   const meta = CHANNEL_META[task.channel] ?? CHANNEL_META.email;
   const Icon = meta.icon;
@@ -223,7 +225,7 @@ export function TaskCard({
   // l'entreprise y est du texte et non un lien — un lien dans un bouton
   // n'est pas du HTML valide, et le lien vers la fiche reste disponible
   // dès que la carte est ouverte.
-  if (!expanded) {
+  if (!shown) {
     return (
       <Card ref={cardRef}>
         {/* Toute la ligne déclenche : viser le chevron ou la pastille n'a
@@ -411,7 +413,10 @@ export function TaskCard({
               capture();
               onToggle();
             }}
-            aria-expanded
+            /* La demande, pas ce qui est à l'écran : pendant le repli le
+               panneau est encore rendu, mais il n'y a plus rien d'ouvert à
+               annoncer. */
+            aria-expanded={expanded}
             aria-controls={panelId}
             /* `-my-2` : la cible reste à 40,5 px, mais elle cesse de dicter
                la hauteur de la rangée. Sans ça la ligne entière descend de

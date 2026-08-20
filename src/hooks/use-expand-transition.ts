@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { Flip } from "gsap/Flip";
 
@@ -13,17 +13,16 @@ gsap.registerPlugin(Flip);
  * hauteur ne corrige rien — la boîte glisse, mais la substitution reste
  * visible en son milieu, et c'est elle qu'on lit comme un à-coup.
  *
- * Ce qui manquait n'est pas de la durée, c'est de la **continuité** : la
- * pastille du canal, le nom, le score, l'échéance et le chevron existent des
- * deux côtés, au même titre, à deux places différentes. Marqués d'un
- * `data-flip-id`, Flip les reconnaît d'un arbre à l'autre et les fait glisser
- * de l'ancienne position vers la nouvelle. Rien n'est remplacé à l'œil : le
- * bandeau se déplie.
+ * **Un seul geste est décrit ici, et le repli le rejoue à l'envers.** C'est
+ * la pièce maîtresse. Tant que le repli avait sa propre mécanique, il
+ * ramenait un à un les défauts qu'on venait de retirer de l'ouverture : la
+ * substitution brutale, et la pastille du retard qui réapparaissait le temps
+ * du retour. Une seule construction, jouée dans les deux sens, ne peut pas
+ * diverger.
  *
  * Le geste tient en deux temps, et un seul mouvement les cadence :
  *
- *   1. le bandeau s'étire, blanc, tel qu'on le connaît — les pièces glissent
- *      vers leur nouvelle place ;
+ *   1. le bandeau s'étire, blanc, tel qu'on le connaît ;
  *   2. un voile de la couleur de la carte se retire vers le bas, découvrant
  *      l'encre. Et **tout le reste se déduit de ce bord** : chaque pièce
  *      change d'encre, chaque ligne nouvelle paraît, le chevron se retourne,
@@ -37,10 +36,18 @@ gsap.registerPlugin(Flip);
  * chaque image. C'est aussi ce qui donne au geste son calendrier — on ne
  * règle pas dix retards à la main, on les lit sur une règle.
  *
- * L'état de départ se relève **dans le gestionnaire de clic**, avant que
- * React ne touche au DOM : c'est la seule fenêtre où l'ancienne disposition
- * existe encore. D'où le `capture()` rendu ici, que la carte appelle avant
- * `onToggle()`.
+ * Deux conséquences sur la façon dont ce fichier est écrit :
+ *
+ * — `shown` n'est pas `expanded`. Au repli, le panneau reste rendu le temps
+ *   de se refermer ; sans ce sursis il n'y aurait rien à animer, et son
+ *   contenu disparaîtrait d'un coup pendant que la boîte, elle, glisse. Le
+ *   geste s'achève quand l'arbre déplié est arrivé exactement à l'aspect de
+ *   la ligne repliée : la substitution ne se voit plus, elle n'a plus rien à
+ *   changer.
+ *
+ * — l'aspect de la ligne repliée — ses encres, sa hauteur — est relevé **tant
+ *   qu'elle est à l'écran**, et gardé. C'est le départ de l'ouverture, et la
+ *   cible du repli.
  */
 
 /**
@@ -73,130 +80,97 @@ const VOILE = "[data-voile]";
  * le premier rendu. Sans lui dans le lot, il disparaissait le temps que
  * l'aplat bascule : clair sur blanc, il n'y avait plus de flèche du tout.
  */
-const ENCRES = `${PARTAGE}, ${CHEVRON}`;
-
-/**
- * 180 ms est la durée d'une modale, qui ne parcourt que quelques pixels
- * d'échelle. Une carte qui passe de 60 px à huit cents sur la même durée file
- * trop vite pour qu'on suive le déplacement des éléments : la durée s'étire
- * donc avec la distance, jusqu'à 340 ms et pas au-delà — un accordéon qui
- * prend une demi-seconde fait attendre.
- *
- * La fermeture reste courte, dans l'esprit des 120 ms de la doctrine : ce qui
- * s'en va n'a pas à se faire attendre. Elle a juste de quoi laisser les
- * éléments revenir à leur place sur la ligne, sans quoi on retomberait sur le
- * saut qu'on vient de retirer.
- */
-const dureeOuverture = gsap.utils.clamp(0.24, 0.34);
-const FERMETURE = 0.16;
-/** Le passage d'une encre à l'autre : assez court pour ne pas se regarder. */
-const CROISEMENT = 0.1;
-/** Où il tombe au repli, faute de voile pour le cadencer. */
-const MOMENT_ENCRE = 0.45;
-/** Le voile part une fois la place prise, et descend d'un trait. */
-const VOILE_DEBUT = 0.3;
-const VOILE_DUREE = 0.22;
+const ENCRES = PARTAGE + ", " + CHEVRON;
 
 /** Les deux seules propriétés qui changent d'un état à l'autre. */
 const PROPRIETES = ["color", "backgroundColor"] as const;
 type Encre = Record<(typeof PROPRIETES)[number], string>;
 
 /**
- * GSAP sait lire `rgb()` et `rgba()`, pas `oklab()` ni `oklch()` — les
- * espaces dans lesquels Tailwind 4 rend les couleurs à opacité modifiée.
- * Sur une cible qu'il ne sait pas lire, il replie sur du noir.
+ * 180 ms est la durée d'une modale, qui ne parcourt que quelques pixels
+ * d'échelle. Une carte qui passe de 60 px à huit cents sur la même durée file
+ * trop vite pour qu'on suive : la durée s'étire donc avec la distance, jusqu'à
+ * 340 ms et pas au-delà — un accordéon qui prend une demi-seconde fait
+ * attendre.
  */
-const interpolable = (couleur: string) => /^rgba?\(/.test(couleur);
+const dureeOuverture = gsap.utils.clamp(0.24, 0.34);
+/** Le voile part une fois la place prise, et descend d'un trait. */
+const VOILE_DEBUT = 0.3;
+const VOILE_DUREE = 0.22;
+/** Ce qui ne peut pas basculer net : la rotation du chevron. */
+const CROISEMENT = 0.1;
+/**
+ * Le repli rejoue le geste à l'envers, mais pas à la même allure : ce qui
+ * s'en va n'a pas à se faire attendre. C'est le seul réglage propre au
+ * retour ; tout le reste est la même construction.
+ */
+const RETOUR = 1.7;
 
 /** Le chevron n'a pas de `data-flip-id` : il lui faut quand même une clé. */
 const cle = (piece: HTMLElement) => piece.dataset.flipId ?? CHEVRON;
 
+/** L'arbre déplié est le seul à porter un voile : ça suffit à le reconnaître. */
+const estDeplie = (el: HTMLElement) => Boolean(el.querySelector(VOILE));
+
+const releverEncres = (el: HTMLElement) => {
+  const encres = new Map<string, Encre>();
+  el.querySelectorAll<HTMLElement>(ENCRES).forEach((piece) => {
+    const style = getComputedStyle(piece);
+    encres.set(cle(piece), {
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+    });
+  });
+  return encres;
+};
+
 export function useExpandTransition(expanded: boolean) {
   const ref = useRef<HTMLDivElement>(null);
-  /** La disposition d'avant la bascule, relevée au clic. */
-  const avant = useRef<Flip.FlipState | null>(null);
-  /** La hauteur du rendu précédent : le point de départ du mouvement. */
-  const hauteurRendue = useRef(0);
-  /** L'aplat du bandeau avant la bascule — encre ouvert, rien replié. */
-  const fondAvant = useRef("");
-  /** Les encres d'avant, pièce par pièce, pour les croiser à part. */
-  const couleursAvant = useRef(new Map<string, Encre>());
+  /** Ce qui est rendu. Diffère de `expanded` le temps d'un repli. */
+  const [shown, setShown] = useState(expanded);
+  /** La disposition d'avant l'ouverture, relevée au clic. */
+  const flip = useRef<Flip.FlipState | null>(null);
+  /** L'aspect de la ligne repliée : départ de l'ouverture, cible du repli. */
+  const encresRepliees = useRef<Map<string, Encre> | null>(null);
+  const hauteurRepliee = useRef(0);
   const monte = useRef(false);
+  const aOuvrir = useRef(false);
 
   const capture = useCallback(() => {
     const el = ref.current;
-    if (!el || sansMouvement()) return;
-    const bandeau = el.firstElementChild;
-    fondAvant.current = bandeau ? getComputedStyle(bandeau).backgroundColor : "";
-
-    /**
-     * Les encres sont relevées à part de la position, et c'est délibéré.
-     *
-     * Confiées à Flip (`props: "color,backgroundColor"`), elles se croisaient
-     * sur toute la durée du glissement : le fond descendait du blanc vers
-     * l'encre pendant que le nom montait de l'encre vers le blanc, et au
-     * milieu les deux se retrouvaient au même gris. Le nom de l'entreprise
-     * disparaissait cinq images durant, en plein milieu du geste.
-     *
-     * Séparées, elles se croisent vite et tard : la position continue de
-     * glisser tranquillement pendant que la couleur, elle, tranche.
-     */
-    couleursAvant.current = new Map();
-    el.querySelectorAll<HTMLElement>(ENCRES).forEach((piece) => {
-      const style = getComputedStyle(piece);
-      couleursAvant.current.set(cle(piece), {
-        color: style.color,
-        backgroundColor: style.backgroundColor,
-      });
-    });
-
-    avant.current = Flip.getState(el.querySelectorAll(PARTAGE));
+    if (!el || sansMouvement() || estDeplie(el)) return;
+    /* On part de la ligne : c'est le moment de relever ce qu'elle est, avant
+       que React ne la remplace. Au repli il n'y a rien à prendre — ce qu'il
+       faut viser a été relevé quand elle était là, et gardé depuis. */
+    encresRepliees.current = releverEncres(el);
+    flip.current = Flip.getState(el.querySelectorAll(PARTAGE));
   }, []);
 
-  useIsomorphicLayoutEffect(() => {
-    const el = ref.current;
-    const etat = avant.current;
-    avant.current = null;
-
-    if (!el) return;
-    /* Au montage il n'y a pas de bascule, seulement un état de départ. */
-    if (!monte.current) {
-      monte.current = true;
-      return;
-    }
-    if (sansMouvement()) return;
-
-    /**
-     * Trois façons d'arriver ici, et seulement deux qui s'animent.
-     *
-     * Sans disposition relevée, la bascule ne vient pas d'un clic sur cette
-     * carte. À l'ouverture, c'est le retour sur la page avec une action
-     * restaurée : elle doit être là, pas se déplier toute seule sous les yeux
-     * — DESIGN.md est explicite, rien ne s'anime sans qu'on l'ait demandé.
-     * À la fermeture en revanche, c'est qu'on vient d'ouvrir une autre action :
-     * la carte perd six cents pixels d'un coup et toute la file saute avec
-     * elle. Pas de morphose à raccorder — l'ancien en-tête n'a pas été
-     * mesuré — mais la hauteur, elle, se referme proprement.
-     */
-    if (expanded && !etat) return;
-
+  /**
+   * Le geste, construit une fois pour les deux sens.
+   *
+   * Il décrit toujours l'**ouverture** : de la ligne repliée vers le panneau.
+   * L'ouverture le joue en avant, le repli le pose à sa fin et le remonte.
+   * D'où l'absence de `clearProps` au repli — les nœuds qu'il touche sont
+   * démontés juste après, et un nettoyage en fin de course viendrait
+   * contrarier la marche arrière.
+   */
+  const construire = (el: HTMLElement, sens: "ouverture" | "repli") => {
+    const ouvre = sens === "ouverture";
+    /* Rendu à étaler, jamais posé tel quel : `clearProps: undefined` fait
+       planter GSAP, qui appelle `.split` dessus sans vérifier. La clé doit
+       être absente, pas vide. */
+    const nettoie = (props: string) => (ouvre ? { clearProps: props } : null);
+    const depart = hauteurRepliee.current;
+    /* On mesure une carte au repos, jamais une carte en train de bouger : si
+       on rebascule au milieu d'un geste, la hauteur en ligne posée par le
+       précédent serait prise pour la hauteur naturelle, et le nouveau geste
+       partirait d'une image intermédiaire. */
     gsap.killTweensOf(el);
-    const depart = hauteurRendue.current;
-    /* Mesurée maintenant, nouvel arbre en place et pas encore peint : c'est
-       la seule fenêtre où la hauteur d'arrivée est connue sans être passée à
-       l'écran. */
+    gsap.set(el, { clearProps: "height,overflow" });
     const naturelle = el.offsetHeight;
-    /* Relevée ici et pas seulement par l'effet de queue : celui-ci se tait
-       tant que ça bouge, et le dernier rendu d'une bascule tombe justement
-       pendant le mouvement qu'elle vient de lancer. Sans cette ligne, la
-       hauteur d'une carte ouverte restait celle de son bandeau, et le repli
-       n'avait plus rien à parcourir — il se faisait d'un coup. */
-    hauteurRendue.current = naturelle;
-    const duree = expanded
-      ? dureeOuverture(Math.abs(naturelle - depart) / 1800)
-      : FERMETURE;
-
-    const tl = gsap.timeline();
+    const duree = dureeOuverture(Math.abs(naturelle - depart) / 1800);
+    const tl = gsap.timeline({ paused: !ouvre });
 
     /* La boîte, d'abord : c'est elle qui fait la place. Sans elle le panneau
        paraîtrait à pleine hauteur et pousserait la file d'un seul coup. */
@@ -206,28 +180,31 @@ export function useExpandTransition(expanded: boolean) {
       {
         height: naturelle,
         duration: duree,
-        ease: expanded ? "power2.out" : "power2.in",
+        ease: "power2.out",
         /* La hauteur repart en `auto` : un panneau figé en pixels ne suivrait
            plus son contenu — le champ de message se redimensionne à la
-           poignée, et l'encadré d'erreur peut déplier son détail technique. */
-        clearProps: "height,overflow",
+           poignée, et l'encadré d'erreur peut déplier son détail technique.
+           Au repli, c'est l'effet de mesure qui nettoie, une fois la ligne
+           rendue. */
+        ...nettoie("height,overflow"),
       },
       0,
     );
 
-    /* Puis ce qui se retrouve des deux côtés, replacé sans être remplacé. */
-    if (etat) {
+    /* Ce qui se retrouve des deux côtés, replacé sans être remplacé. Au repli
+       il n'y a rien à raccorder : on anime l'arbre déplié sur lui-même, et
+       les deux états sont alignés au pixel. */
+    if (ouvre && flip.current) {
       tl.add(
-        Flip.from(etat, {
+        Flip.from(flip.current, {
           /* Indispensable, et silencieux si on l'oublie : sans `targets`,
              Flip reconstruit l'état d'arrivée à partir des nœuds qu'il avait
              relevés — or ceux-là viennent d'être détachés du DOM par React.
              Il compare alors du vide à du vide et n'anime rien, sans erreur
-             ni avertissement. Ce sont les nœuds *actuels* qu'il faut lui
-             désigner ; l'appariement se fait ensuite par `data-flip-id`. */
+             ni avertissement. */
           targets: el.querySelectorAll(PARTAGE),
           duration: duree,
-          ease: expanded ? "power2.out" : "power2.in",
+          ease: "power2.out",
           /* `absolute` sortirait les pièces du flux : l'en-tête se
              réorganiserait autour d'elles pendant qu'elles glissent. */
           absolute: false,
@@ -237,7 +214,7 @@ export function useExpandTransition(expanded: boolean) {
     }
 
     const entete = el.firstElementChild as HTMLElement | null;
-    const voile = expanded ? el.querySelector<HTMLElement>(VOILE) : null;
+    const voile = el.querySelector<HTMLElement>(VOILE);
     const cadreEntete = entete?.getBoundingClientRect();
     const hautEntete = cadreEntete?.top ?? 0;
     const hauteurEntete = cadreEntete?.height || 1;
@@ -250,11 +227,8 @@ export function useExpandTransition(expanded: boolean) {
      * on ne règle pas dix retards à la main, on les déduit d'un seul
      * mouvement, et le contraste est juste par construction : au-dessus du
      * bord il y a l'encre, au-dessous la carte, jamais de gris entre les deux.
-     *
-     * Sans voile — c'est le repli — tout bascule au même instant.
      */
     const decouverte = (piece: Element) => {
-      if (!voile) return duree * MOMENT_ENCRE;
       const cadre = piece.getBoundingClientRect();
       /* Le milieu de la pièce, pas son bas : le bord met une image et demie à
          la traverser, autant le prendre en son centre. */
@@ -269,28 +243,19 @@ export function useExpandTransition(expanded: boolean) {
       tl.fromTo(
         voile,
         { scaleY: 1 },
-        /* `none`, et c'est une contrainte, pas un goût : `decouverte` déduit
-           l'heure de chaque pièce de sa position, en supposant un bord à
-           vitesse constante. Sous une courbe, le bord passe ailleurs qu'au
-           moment calculé — mesuré : une image d'avance, où le nom se
-           retrouve en clair sur du blanc. Un rideau à vitesse constante, en
-           deux cent vingt millisecondes, se lit d'ailleurs très bien. */
-        { scaleY: 0, duration: VOILE_DUREE, ease: "none", clearProps: "transform" },
-        duree * VOILE_DEBUT,
-      );
-    } else if (entete && fondAvant.current) {
-      /* Au repli il n'y a pas de voile à retirer : le bandeau reprend son
-         aplat depuis l'encre relevée au clic. Soixante-deux pixels de haut et
-         cent millisecondes — le gris n'a pas le temps de se voir. */
-      tl.from(
-        entete,
         {
-          backgroundColor: fondAvant.current,
-          duration: CROISEMENT,
-          ease: "power1.inOut",
-          clearProps: "backgroundColor",
+          scaleY: 0,
+          duration: VOILE_DUREE,
+          /* `none`, et c'est une contrainte, pas un goût : `decouverte` déduit
+             l'heure de chaque pièce de sa position, en supposant un bord à
+             vitesse constante. Sous une courbe, le bord passe ailleurs qu'au
+             moment calculé — mesuré : une image d'avance, où le nom se
+             retrouve en clair sur du blanc. Un rideau à vitesse constante, en
+             deux cent vingt millisecondes, se lit d'ailleurs très bien. */
+          ease: "none",
+          ...nettoie("transform"),
         },
-        duree * MOMENT_ENCRE,
+        duree * VOILE_DEBUT,
       );
     }
 
@@ -304,49 +269,30 @@ export function useExpandTransition(expanded: boolean) {
      * CSS que `badgeVariants` porte dans ses classes de base.
      *
      * La seconde : **à bord franc, bascule franche**. Sous le voile, le fond
-     * d'une pièce ne se dégrade pas — il passe de la carte à l'encre en une
+     * d'une pièce ne se dégrade pas : il passe de la carte à l'encre en une
      * image, quand le bord la traverse. Une encre qui mettrait cent
-     * millisecondes à suivre resterait grise sur un fond déjà noir : c'est
-     * exactement ce qu'on voit sur la trace image par image, quatre images de
-     * texte gris sur l'encre. Elle bascule donc avec le bord, au même
-     * instant.
-     *
-     * Au repli, sans voile, il n'y a pas de bord : là un fondu court est le
-     * seul moyen honnête, quand GSAP sait lire les deux bouts. Tailwind 4
-     * écrit les couleurs à opacité modifiée en `oklab()`, qu'il ne sait pas
-     * lire — il replie alors la cible sur du noir, et une couleur qui
-     * traverse une valeur fausse est pire que pas de dégradé du tout.
+     * millisecondes à suivre resterait grise sur un fond déjà noir. C'est
+     * aussi ce qui évacue un piège : Tailwind 4 écrit les couleurs à opacité
+     * modifiée en `oklab()`, que GSAP ne sait pas interpoler — une bascule
+     * n'a pas ce problème, elle n'a rien à traverser.
      */
-    if (etat) {
+    const encres = encresRepliees.current;
+    if (encres) {
       const touchees: HTMLElement[] = [];
 
       el.querySelectorAll<HTMLElement>(ENCRES).forEach((piece) => {
-        const avantEncre = couleursAvant.current.get(cle(piece));
-        if (!avantEncre) return;
+        const repliee = encres.get(cle(piece));
+        if (!repliee) return;
         const style = getComputedStyle(piece);
         const moment = decouverte(piece);
 
         PROPRIETES.forEach((prop) => {
-          const ancienne = avantEncre[prop];
+          const ancienne = repliee[prop];
           const actuelle = style[prop];
           if (!ancienne || ancienne === actuelle) return;
           touchees.push(piece);
-
-          if (!voile && interpolable(ancienne) && interpolable(actuelle)) {
-            tl.from(
-              piece,
-              { [prop]: ancienne, duration: CROISEMENT, ease: "power1.inOut", clearProps: prop },
-              moment,
-            );
-            return;
-          }
-
-          /* Tenue, puis lâchée d'un coup. Posée hors timeline : un `set` à
-             zéro n'est rendu qu'au premier battement de GSAP, une image plus
-             tard — et cette image-là passe à l'écran avec la nouvelle encre
-             sur l'ancien fond. */
-          gsap.set(piece, { [prop]: ancienne });
-          tl.set(piece, { clearProps: prop }, moment);
+          tl.set(piece, { [prop]: ancienne }, 0);
+          tl.set(piece, { [prop]: actuelle }, moment);
         });
       });
 
@@ -359,8 +305,14 @@ export function useExpandTransition(expanded: boolean) {
          * complètement puis revenir. Deux moteurs sur la même propriété, il
          * faut en couper un.
          */
-        gsap.set(touchees, { transitionProperty: "none" });
-        tl.set(touchees, { clearProps: "transitionProperty" }, duree);
+        tl.set(touchees, { transitionProperty: "none" }, 0);
+        if (ouvre) {
+          tl.set(
+            touchees,
+            { clearProps: "transitionProperty,color,backgroundColor" },
+            duree,
+          );
+        }
       }
     }
 
@@ -371,8 +323,7 @@ export function useExpandTransition(expanded: boolean) {
      * en même temps : il passait par tous les degrés intermédiaires, et une
      * flèche à quarante-cinq degrés n'est plus une flèche — elle a l'air
      * cassée. Il reste donc où il est et ne fait qu'une chose : se retourner,
-     * au moment où le voile le dépasse, en partant de l'orientation qu'avait
-     * l'autre chevron. La rotation est portée par l'enveloppe, le demi-tour
+     * au passage du bord. La rotation est portée par l'enveloppe, le demi-tour
      * au repos par le `<svg>` : sur le même nœud, ils se cumuleraient.
      */
     const chevron = el.querySelector<HTMLElement>(CHEVRON);
@@ -380,10 +331,10 @@ export function useExpandTransition(expanded: boolean) {
       tl.from(
         chevron,
         {
-          rotation: expanded ? -180 : 180,
+          rotation: -180,
           duration: CROISEMENT,
           ease: "power2.inOut",
-          clearProps: "rotate,transform",
+          ...nettoie("rotate,transform"),
         },
         /* Centrée sur le passage du bord, et non calée dessus : une rotation
            est un mouvement, elle a besoin de part et d'autre. */
@@ -393,49 +344,106 @@ export function useExpandTransition(expanded: boolean) {
 
     /* Ce qui n'existe qu'ouvert n'a pas d'ancienne place : ça ne peut que
        paraître. Chacun à son tour, quand le bord du voile arrive sur lui —
-       ces lignes-là sont écrites en encre claire, pour le fond sombre, et
-       les faire monter sur du blanc, c'est les faire paraître en blanc sur
-       blanc. Le panneau, lui, est sous l'en-tête : il vient en dernier. */
-    if (expanded) {
-      gsap.utils.toArray<HTMLElement>(el.querySelectorAll(NOUVEAU)).forEach((neuf) => {
-        tl.from(
-          neuf,
-          {
-            opacity: 0,
-            duration: CROISEMENT * 1.4,
-            ease: "power1.out",
-            clearProps: "opacity",
-          },
-          decouverte(neuf),
-        );
-      });
+       ces lignes-là sont écrites en encre claire, pour le fond sombre, et les
+       faire monter sur du blanc, c'est les faire paraître en blanc sur blanc.
+       Le panneau, lui, est sous l'en-tête : il vient en dernier à l'ouverture,
+       et s'en va en premier au repli. */
+    gsap.utils.toArray<HTMLElement>(el.querySelectorAll(NOUVEAU)).forEach((neuf) => {
+      tl.from(
+        neuf,
+        {
+          opacity: 0,
+          duration: CROISEMENT * 1.4,
+          ease: "power1.out",
+          ...nettoie("opacity"),
+        },
+        decouverte(neuf),
+      );
+    });
+
+    return tl;
+  };
+
+  /**
+   * Tant que la ligne est là, on relève ce qu'elle est.
+   *
+   * Une fois le panneau rendu, ni sa hauteur ni ses encres ne sont mesurables
+   * — et ce sont elles que l'ouverture prend pour départ et que le repli
+   * prend pour cible. C'est aussi ici qu'on retire la hauteur laissée en ligne
+   * par un repli : après la mutation du DOM et avant la peinture, donc sans
+   * que la carte reprenne sa taille naturelle le temps d'une image.
+   */
+  useIsomorphicLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || shown) return;
+    gsap.set(el, { clearProps: "height,overflow,pointerEvents" });
+    hauteurRepliee.current = el.offsetHeight;
+    if (!encresRepliees.current) encresRepliees.current = releverEncres(el);
+  });
+
+  useIsomorphicLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    /* Au montage il n'y a pas de bascule, seulement un état de départ. */
+    if (!monte.current) {
+      monte.current = true;
+      return;
     }
+    if (expanded === shown) return;
+
+    if (sansMouvement()) {
+      setShown(expanded);
+      return;
+    }
+
+    if (expanded) {
+      /* Rien à animer encore : le panneau n'est pas rendu. On le demande, et
+         l'effet suivant l'ouvre une fois qu'il est là. */
+      aOuvrir.current = true;
+      setShown(true);
+      return;
+    }
+
+    /**
+     * Le repli : le geste d'ouverture posé à sa fin, puis remonté.
+     *
+     * Faute d'avoir jamais vu cette carte repliée — une action restaurée au
+     * retour sur la page, refermée sans avoir été rouverte entre-temps — il
+     * n'y a ni hauteur ni encres à viser. On rend alors la ligne tout de
+     * suite ; c'est le seul cas où le retour ne se joue pas.
+     */
+    if (!encresRepliees.current || !hauteurRepliee.current) {
+      setShown(false);
+      return;
+    }
+
+    gsap.killTweensOf(el);
+    /* Le panneau s'en va : ses boutons ne doivent plus rien recevoir. */
+    gsap.set(el, { pointerEvents: "none" });
+    const tl = construire(el, "repli");
+    tl.eventCallback("onReverseComplete", () => setShown(false));
+    tl.progress(1).timeScale(RETOUR).reverse();
 
     return () => {
       tl.kill();
     };
-  }, [expanded]);
+  }, [expanded, shown]);
 
-  /**
-   * Après l'effet d'animation, jamais avant : celui-ci lit la hauteur du
-   * rendu précédent, celui-là l'écrase avec la nouvelle. L'ordre de
-   * déclaration est l'ordre d'exécution, et c'est tout ce qui tient la
-   * mécanique.
-   *
-   * Une carte ouverte se rend à chaque frappe dans le brouillon : si un de
-   * ces rendus tombe pendant le mouvement, la hauteur relevée serait celle
-   * d'une image intermédiaire. La hauteur en ligne est la marque du tween —
-   * `fromTo` la pose dès sa création, et `clearProps` la retire à la fin.
-   * Tant qu'elle est là, on ne relève rien.
-   *
-   * `gsap.isTweening` ne suffirait pas : au rendu qui lance le mouvement, le
-   * tween existe déjà mais n'a pas encore été joué, et la mesure repartait
-   * alors à la hauteur du bandeau. Le repli n'avait plus rien à parcourir.
-   */
+  /** L'ouverture, une fois le panneau rendu. */
   useIsomorphicLayoutEffect(() => {
-    const el = ref.current;
-    if (el && !el.style.height) hauteurRendue.current = el.offsetHeight;
-  });
+    if (!shown || !aOuvrir.current) return;
+    aOuvrir.current = false;
 
-  return { ref, capture };
+    const el = ref.current;
+    if (!el || sansMouvement()) return;
+
+    gsap.killTweensOf(el);
+    const tl = construire(el, "ouverture");
+
+    return () => {
+      tl.kill();
+    };
+  }, [shown]);
+
+  return { ref, capture, shown };
 }

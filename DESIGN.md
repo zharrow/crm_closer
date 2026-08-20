@@ -888,9 +888,21 @@ passe ailleurs qu'à l'heure calculée, et le texte bascule une image trop tôt,
 en clair sur du blanc.
 
 Le geste : le bandeau s'étire en blanc (240 à 340 ms selon la distance), le
-voile se retire à partir de 30 %, tout suit son bord. Le repli refait le
-chemin en 160 ms — sans voile, avec un fondu court, parce que 62 px de haut ne
-laissent pas le temps de voir un gris.
+voile se retire à partir de 30 %, tout suit son bord.
+
+**Le repli n'a pas de mécanique à lui : c'est le même geste, joué à l'envers,
+1,7 fois plus vite.** Tant qu'il en avait une, il ramenait un à un les défauts
+qu'on venait de retirer de l'ouverture — la substitution brutale, et la
+pastille du retard qui réapparaissait sur la ligne blanche le temps du retour.
+Une seule construction jouée dans les deux sens ne peut pas diverger : on pose
+la timeline à sa fin (`progress(1)`) et on la remonte (`reverse()`). Le
+panneau s'efface, l'encre remonte, la ligne retrouve exactement son aspect
+replié — et c'est seulement là que React remplace l'arbre, quand la
+substitution n'a plus rien à changer.
+
+C'est pourquoi `useExpandTransition` rend un `shown` distinct de `expanded` :
+au repli, le panneau reste monté le temps de se refermer. Sans ce sursis, son
+contenu disparaît d'un coup pendant que la boîte, elle, glisse.
 
 Deux pièges de couleur, tous deux invisibles en lecture de code :
 
