@@ -7,7 +7,8 @@ import { Play } from "@/components/animate-ui/icons/play";
 import { RefreshCw } from "@/components/animate-ui/icons/refresh-cw";
 import { ThumbsDown } from "@/components/animate-ui/icons/thumbs-down";
 import { ActionButton } from "@/components/action-button";
-import { Input } from "@/components/ui/input";
+import { DateField } from "@/components/ui/date-field";
+import { Label } from "@/components/ui/label";
 import {
   enrichLeadNow,
   enrollLeadNow,
@@ -21,6 +22,7 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
   const [pending, startTransition] = useTransition();
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingDate, setBookingDate] = useState("");
+  const champRdv = `rdv-${leadId}`;
 
   const run = (fn: () => Promise<unknown>, success: string) =>
     startTransition(async () => {
@@ -67,14 +69,30 @@ export function LeadActions({ leadId, status }: { leadId: string; status: string
       )}
 
       {bookingOpen ? (
-        <div className="flex items-center gap-2">
-          <Input
-            type="datetime-local"
-            aria-label="Date et heure du rendez-vous"
-            value={bookingDate}
-            onChange={(event) => setBookingDate(event.target.value)}
-            className="h-9 w-52"
-          />
+        /* `w-full` : la rangée est en `flex-wrap`, le formulaire prend donc
+           sa propre ligne au lieu de se serrer entre deux boutons. Et
+           `items-end` pour que les boutons s'alignent sur le bas du champ,
+           qui porte un libellé au-dessus. */
+        <div className="flex w-full flex-wrap items-end gap-2">
+          <div className="flex flex-col gap-1.5">
+            {/* Un libellé visible, pas un `aria-label` : la règle de
+                DESIGN.md vaut aussi pour un champ qui n'apparaît qu'au clic.
+                Sans lui, il ne restait qu'un gabarit `jj/mm/aaaa` posé entre
+                deux boutons, et rien ne disait de quelle date il s'agissait. */}
+            <Label htmlFor={champRdv}>Date et heure du rendez-vous</Label>
+            <DateField
+              id={champRdv}
+              value={bookingDate}
+              onChange={(event) => setBookingDate(event.target.value)}
+              /* `h-9` : la hauteur des boutons `sm` de cette rangée, et non
+                 celle d'un champ de formulaire. `w-auto` parce qu'un champ de
+                 date se dimensionne tout seul, et lui seul sait à quoi : le
+                 gabarit change avec la langue du navigateur, et le mono est
+                 plus large que la police système. À largeur fixe, l'icône du
+                 calendrier finissait poussée hors du cadre. */
+              className="h-9 w-auto"
+            />
+          </div>
           <ActionButton
             size="sm"
             disabled={pending || !bookingDate}

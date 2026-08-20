@@ -33,6 +33,11 @@
 :root {
   color-scheme: light;
 
+  /* Le calendrier de Lucide, en masque : c'est l'icône du bouton natif des
+     champs de date. Ici plutôt qu'en ligne pour n'écrire le tracé qu'une
+     fois, et le tenir à côté des autres jetons. */
+  --icone-calendrier: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect width='18' height='18' x='3' y='4' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E");
+
   /* Le rayon est une information de plan, et l'écart entre les trois
      valeurs est plus important que les valeurs elles-mêmes : un panneau
      porte, un contrôle est porté, une pilule est cliquable. */
@@ -469,6 +474,80 @@
   .on-tone:focus-visible {
     outline-color: currentColor;
   }
+}
+
+/* ---------------------------------------------------------------------
+   LE CHAMP DE DATE
+
+   Le seul contrôle de l'app que le navigateur dessine lui-même. Laissé tel
+   quel, il arrivait en police système, avec son gabarit `mm/dd/yyyy` en
+   encre pleine et sa petite icône noire — au milieu d'une page où tout le
+   reste suit la DA, c'est la pièce qu'on repère immédiatement.
+
+   On ne peut pas le remplacer sans réécrire un calendrier entier, et on n'en
+   veut pas : le contrôle natif ouvre le sélecteur du système, se navigue au
+   clavier, se dicte à la voix et connaît le format local. Ce qui se règle,
+   ce sont ses trois parties visibles.
+
+   Ciblé sur le type et non sur une classe : un champ de date ajouté demain
+   sera juste sans qu'on ait à y penser.
+   --------------------------------------------------------------------- */
+
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  /* Une date est une donnée, comme un score ou un SIREN : elle se lit en
+     mono, chiffres tabulaires — sinon les segments se décalent d'un pixel à
+     chaque frappe. */
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Le gabarit d'un champ vide n'est pas une valeur : il se tient en retrait,
+   comme un `placeholder`. Aucun sélecteur CSS ne sait dire « ce champ de
+   date est vide » — c'est le composant qui pose `data-vide`. */
+input[data-vide]::-webkit-datetime-edit {
+  color: var(--muted-foreground);
+}
+
+/* Les séparateurs pèsent autant que les chiffres alors qu'ils ne portent
+   rien : `20/08/2026` se lit mieux quand les barres s'effacent. */
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="datetime-local"]::-webkit-datetime-edit-text,
+input[type="time"]::-webkit-datetime-edit-text {
+  color: var(--muted-foreground);
+  padding: 0 0.05em;
+}
+
+/* L'icône du navigateur, remplacée par la nôtre : le glyphe sert de masque,
+   la couleur vient des variables du thème. C'est le seul moyen de garder le
+   bouton natif — celui qui ouvre le sélecteur — en lui donnant le trait de
+   Lucide, comme partout ailleurs dans l'app. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-inline-start: 0.35rem;
+  padding: 0;
+  cursor: pointer;
+  opacity: 1;
+  background-color: var(--muted-foreground);
+  -webkit-mask-image: var(--icone-calendrier);
+  mask-image: var(--icone-calendrier);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  transition: background-color 150ms ease;
+}
+
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]:hover::-webkit-calendar-picker-indicator,
+input[type="time"]:hover::-webkit-calendar-picker-indicator {
+  background-color: var(--foreground);
 }
 
 /* ---------------------------------------------------------------------

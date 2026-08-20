@@ -584,6 +584,46 @@ Le `select` fait exception et n'a pas de mode lecture : il *est* déjà sa
 propre valeur. Le déguiser en texte imposerait un clic de plus pour révéler
 un contrôle qui n'occupe pas plus de place que le texte qu'il remplacerait.
 
+### Le champ de date reste natif, mais il s'habille
+
+C'est le seul contrôle que le navigateur dessine lui-même. Laissé tel quel, il
+arrivait en police système, avec son gabarit `mm/dd/yyyy` peint en encre pleine
+comme s'il s'agissait d'une valeur, et sa petite icône noire. Au milieu d'une
+fiche prospect où tout le reste suit la DA, c'est la pièce qu'on repère
+immédiatement — et c'est bien ce qu'on nous a dit.
+
+**On ne le remplace pas par un calendrier maison.** Le contrôle natif ouvre le
+sélecteur du système, se navigue au clavier, se dicte à la voix, connaît le
+format local et la semaine du pays. Un composant reconstruit perd tout ça pour
+gagner une bordure. Ce qui se règle, ce sont ses trois parties visibles, dans
+`globals.css`, ciblées sur le **type** et non sur une classe — un champ de date
+ajouté demain sera juste sans qu'on y pense :
+
+- **la date est une donnée** : mono, chiffres tabulaires, comme un score ou un
+  SIREN. Sinon les segments se décalent d'un pixel à chaque frappe ;
+- **les séparateurs s'effacent** (`--muted-foreground`) : `20/08/2026` se lit
+  mieux quand les barres ne pèsent pas autant que les chiffres ;
+- **l'icône du navigateur est remplacée par la nôtre**, le glyphe Lucide servant
+  de masque et la couleur venant des variables du thème. C'est le seul moyen de
+  garder le bouton natif — celui qui ouvre le sélecteur — avec le trait de
+  l'app, en clair comme en sombre.
+
+Deux choses que le CSS ne peut pas faire seul, et qui vivent donc dans
+`ui/date-field.tsx` et à l'usage :
+
+- **le gabarit d'un champ vide n'est pas une valeur.** Aucun sélecteur ne dit
+  « ce champ de date est vide » : `:placeholder-shown` ne s'y applique pas et
+  `:invalid` ne se déclenche que si le champ est requis. Le composant pose donc
+  `data-vide`, que le CSS attend pour mettre le gabarit en retrait ;
+- **la largeur est `w-auto`.** Le gabarit change avec la langue du navigateur et
+  le mono est plus large que la police système : à largeur fixe, l'icône du
+  calendrier finit poussée hors du cadre.
+
+Et la règle du libellé visible vaut aussi pour un champ qui n'apparaît qu'au
+clic : le champ de RDV n'avait qu'un `aria-label`, donc à l'écran un gabarit
+`jj/mm/aaaa` coincé entre deux boutons, sans rien pour dire de quelle date il
+s'agissait.
+
 ### La file du jour : une action ouverte à la fois
 
 Les actions dépliées les unes sous les autres, la journée ne se voyait pas —
