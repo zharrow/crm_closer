@@ -861,23 +861,66 @@ sont deux arbres différents, que React substitue en une image. Animer la seule
 hauteur ne suffit pas : la boîte glisse, mais la substitution reste visible en
 son milieu, et c'est elle qu'on lit comme un à-coup.
 
-La règle tient en deux attributs, dans `task-card.tsx` :
+La règle tient en trois attributs, dans `task-card.tsx` :
 
 | Attribut | Pour | Effet |
 |---|---|---|
-| `data-flip-id` | ce qui existe **des deux côtés** (canal, nom, score, échéance, chevron) | glisse de l'ancienne place à la nouvelle |
+| `data-flip-id` | ce qui existe **des deux côtés** (canal, nom, score, échéance) | glisse de l'ancienne place à la nouvelle |
 | `data-reveal` | ce qui n'existe **qu'ouvert** (étape, contact, argumentaire, panneau) | paraît, une fois le fond sombre |
+| `data-chevron` | la flèche, seule de son espèce | pivote sur place, sans se déplacer |
+| `data-voile` | l'aplat de la carte, par-dessus l'encre | se retire vers le bas, et cadence tout le reste |
 
 Toute pièce ajoutée à l'en-tête doit choisir son camp. Une pièce présente des
-deux côtés sans `data-flip-id` sera remplacée au milieu du geste — c'est
-exactement le défaut qu'on vient de retirer.
+deux côtés sans `data-flip-id` sera remplacée au milieu du geste.
 
-Trois temps, et l'ordre compte plus que les durées : le bandeau s'étire en
-blanc (240 à 340 ms selon la distance parcourue) ; passé la moitié, l'encre
-bascule en 100 ms ; le reste paraît par-dessus. **L'aplat et les textes qu'il
-porte changent ensemble** : étalés séparément sur tout le geste, ils se
-croisent au même gris et le nom de l'entreprise disparaît cinq images durant.
-Le repli refait le chemin en 160 ms.
+**Le blanc ne devient pas noir : il se retire.** Un fondu entre les deux passe
+par le gris — c'est de l'arithmétique, pas un réglage : à mi-chemin le fond et
+le texte se retrouvent à la même valeur et le nom de l'entreprise disparaît.
+L'en-tête porte donc un **voile** (`data-voile`) de la couleur de la carte,
+posé par-dessus l'encre, qui se retire vers le bas en 220 ms. Au-dessus du
+bord l'encre, au-dessous la carte, jamais de gris entre les deux.
+
+**Ce bord est l'horloge du geste.** Chaque pièce change d'encre, chaque ligne
+nouvelle paraît, le chevron se retourne — au moment précis où le bord la
+dépasse, calculé depuis sa position dans l'en-tête. D'où une contrainte à ne
+pas défaire : **le voile descend en `ease: "none"`**. Sous une courbe, le bord
+passe ailleurs qu'à l'heure calculée, et le texte bascule une image trop tôt,
+en clair sur du blanc.
+
+Le geste : le bandeau s'étire en blanc (240 à 340 ms selon la distance), le
+voile se retire à partir de 30 %, tout suit son bord. Le repli refait le
+chemin en 160 ms — sans voile, avec un fondu court, parce que 62 px de haut ne
+laissent pas le temps de voir un gris.
+
+Deux pièges de couleur, tous deux invisibles en lecture de code :
+
+- **Tailwind 4 écrit les couleurs à opacité modifiée en `oklab()`** (tout
+  `text-…/70`), que GSAP ne sait pas lire : il replie la cible sur du noir.
+  D'où `interpolable()` dans le hook — on n'interpole que du `rgb()`, on
+  bascule le reste.
+- **`badgeVariants` porte `transition-colors` dans ses classes de base.** Dès
+  que GSAP écrit une couleur en ligne sur une pastille, la transition CSS s'en
+  empare et la ramène : on voyait la pastille du retard s'effacer puis
+  revenir. Deux moteurs sur la même propriété, il faut en couper un — le hook
+  neutralise `transition-property` sur ce qu'il touche. Et il ne touche que ce
+  qui change vraiment : les pastilles du canal et du score ont la même couleur
+  des deux côtés, on les laisse tranquilles.
+
+**Trois choses ne doivent pas bouger en s'ouvrant**, et chacune a coûté un
+aller-retour :
+
+- **la première ligne ne descend pas.** L'en-tête porte `pt-4`, le retrait du
+  bandeau, et non le `p-5` de ses trois autres côtés ; le bouton de repli
+  porte `-my-2` pour garder sa cible de 40,5 px sans dicter la hauteur de la
+  rangée. Sans ces deux-là, la ligne descend de 11,5 px.
+- **l'échéance reste au bord droit**, `ml-auto` des deux côtés. Posée après le
+  score dans l'en-tête, elle traversait 361 px à chaque ouverture.
+- **le chevron reste à sa place.** Les deux états lui donnent la même
+  empreinte de 40,5 px — c'est elle qui fixe où s'arrête l'échéance. Apparié
+  par Flip, il changeait de place *et* d'angle : il passait par tous les
+  degrés intermédiaires, et une flèche à quarante-cinq degrés a l'air cassée.
+  Le demi-tour au repos est sur le `<svg>`, la rotation animée sur
+  l'enveloppe : sur le même nœud, ils se cumuleraient.
 
 ### Une contrainte qui n'est pas du design mais qui le borne
 

@@ -20,14 +20,22 @@ gsap.registerPlugin(Flip);
  * de l'ancienne position vers la nouvelle. Rien n'est remplacé à l'œil : le
  * bandeau se déplie.
  *
- * Le geste tient en trois temps, et l'ordre compte plus que les durées :
+ * Le geste tient en deux temps, et un seul mouvement les cadence :
  *
  *   1. le bandeau s'étire, blanc, tel qu'on le connaît — les pièces glissent
  *      vers leur nouvelle place ;
- *   2. passé la moitié, l'encre bascule d'un coup court : l'aplat et les
- *      textes qu'il porte changent **ensemble**, sinon il y a un moment où
- *      les deux se retrouvent au même gris ;
- *   3. ce qui n'existe qu'ouvert paraît par-dessus le fond désormais sombre.
+ *   2. un voile de la couleur de la carte se retire vers le bas, découvrant
+ *      l'encre. Et **tout le reste se déduit de ce bord** : chaque pièce
+ *      change d'encre, chaque ligne nouvelle paraît, le chevron se retourne,
+ *      au moment précis où le bord la dépasse.
+ *
+ * Ce voile n'est pas un effet, c'est ce qui rend le reste possible. Un fondu
+ * du blanc vers l'encre passe par le gris — c'est de l'arithmétique, pas un
+ * réglage : à mi-chemin le fond et le texte se retrouvent à la même valeur,
+ * et le nom de l'entreprise disparaît. Un bord ne mélange rien : au-dessus
+ * l'encre, au-dessous la carte, et le contraste est juste des deux côtés à
+ * chaque image. C'est aussi ce qui donne au geste son calendrier — on ne
+ * règle pas dix retards à la main, on les lit sur une règle.
  *
  * L'état de départ se relève **dans le gestionnaire de clic**, avant que
  * React ne touche au DOM : c'est la seule fenêtre où l'ancienne disposition
@@ -57,6 +65,8 @@ const PARTAGE = "[data-flip-id]";
 const NOUVEAU = "[data-reveal]";
 /** Le chevron, qui ne se déplace pas mais se retourne. */
 const CHEVRON = "[data-chevron]";
+/** L'aplat de la carte, posé par-dessus l'encre, qui se retire vers le bas. */
+const VOILE = "[data-voile]";
 /**
  * Tout ce qui change d'encre en changeant d'état — les pièces appariées, et
  * le chevron qui n'est pas apparié mais porte quand même l'encre claire dès
@@ -81,8 +91,25 @@ const dureeOuverture = gsap.utils.clamp(0.24, 0.34);
 const FERMETURE = 0.16;
 /** Le passage d'une encre à l'autre : assez court pour ne pas se regarder. */
 const CROISEMENT = 0.1;
-/** Où il tombe dans le geste — après l'étirement, avant que tout soit posé. */
+/** Où il tombe au repli, faute de voile pour le cadencer. */
 const MOMENT_ENCRE = 0.45;
+/** Le voile part une fois la place prise, et descend d'un trait. */
+const VOILE_DEBUT = 0.3;
+const VOILE_DUREE = 0.22;
+
+/** Les deux seules propriétés qui changent d'un état à l'autre. */
+const PROPRIETES = ["color", "backgroundColor"] as const;
+type Encre = Record<(typeof PROPRIETES)[number], string>;
+
+/**
+ * GSAP sait lire `rgb()` et `rgba()`, pas `oklab()` ni `oklch()` — les
+ * espaces dans lesquels Tailwind 4 rend les couleurs à opacité modifiée.
+ * Sur une cible qu'il ne sait pas lire, il replie sur du noir.
+ */
+const interpolable = (couleur: string) => /^rgba?\(/.test(couleur);
+
+/** Le chevron n'a pas de `data-flip-id` : il lui faut quand même une clé. */
+const cle = (piece: HTMLElement) => piece.dataset.flipId ?? CHEVRON;
 
 export function useExpandTransition(expanded: boolean) {
   const ref = useRef<HTMLDivElement>(null);
@@ -93,7 +120,7 @@ export function useExpandTransition(expanded: boolean) {
   /** L'aplat du bandeau avant la bascule — encre ouvert, rien replié. */
   const fondAvant = useRef("");
   /** Les encres d'avant, pièce par pièce, pour les croiser à part. */
-  const couleursAvant = useRef(new Map<string, gsap.TweenVars>());
+  const couleursAvant = useRef(new Map<string, Encre>());
   const monte = useRef(false);
 
   const capture = useCallback(() => {
@@ -116,9 +143,8 @@ export function useExpandTransition(expanded: boolean) {
      */
     couleursAvant.current = new Map();
     el.querySelectorAll<HTMLElement>(ENCRES).forEach((piece) => {
-      const id = piece.dataset.flipId ?? CHEVRON;
       const style = getComputedStyle(piece);
-      couleursAvant.current.set(id, {
+      couleursAvant.current.set(cle(piece), {
         color: style.color,
         backgroundColor: style.backgroundColor,
       });
@@ -208,71 +234,133 @@ export function useExpandTransition(expanded: boolean) {
         }),
         0,
       );
+    }
 
-      /**
-       * Les encres : tenues, puis lâchées. Pas interpolées.
-       *
-       * Tailwind 4 écrit les couleurs à opacité modifiée en `oklab()` —
-       * `text-on-ink/70`, par exemple. GSAP ne sait pas lire cet espace : il
-       * repliait la cible sur du noir, et le chevron virait au noir sur fond
-       * noir une image avant d'atterrir. Un dégradé de couleur qui traverse
-       * une valeur fausse est pire que pas de dégradé du tout.
-       *
-       * Chaque pièce garde donc son ancienne encre pendant que l'aplat
-       * s'assombrit, et la lâche à mi-parcours du basculement : le fond est
-       * alors à mi-chemin, où l'ancienne encre et la nouvelle tiennent toutes
-       * les deux. Le changement passe en une image, sans jamais rien rendre
-       * illisible — et sans dépendre de ce que GSAP sait analyser.
-       */
-      const bascule = duree * MOMENT_ENCRE + CROISEMENT / 2;
-      el.querySelectorAll<HTMLElement>(ENCRES).forEach((piece) => {
-        const encre = couleursAvant.current.get(piece.dataset.flipId ?? CHEVRON);
-        if (!encre) return;
-        /* Posé tout de suite, hors timeline, et pas en `set(…, 0)` : un `set`
-           à zéro n'est rendu qu'au premier battement de GSAP, une image plus
-           tard. Cette image-là passait à l'écran avec les encres claires du
-           nouvel arbre sur le fond encore blanc — un clignotement, à
-           l'endroit exact qu'on cherche à rendre continu. Ici on écrit avant
-           la peinture, comme les `from()` qui l'entourent. */
-        gsap.set(piece, encre);
-        tl.set(piece, { clearProps: "color,backgroundColor" }, bascule);
-      });
+    const entete = el.firstElementChild as HTMLElement | null;
+    const voile = expanded ? el.querySelector<HTMLElement>(VOILE) : null;
+    const cadreEntete = entete?.getBoundingClientRect();
+    const hautEntete = cadreEntete?.top ?? 0;
+    const hauteurEntete = cadreEntete?.height || 1;
+
+    /**
+     * Le calendrier de tout ce qui se trouve dans l'en-tête.
+     *
+     * Une pièce ne change pas d'encre à une heure convenue : elle change
+     * quand le bord du voile la dépasse. C'est ce qui fait tenir l'ensemble —
+     * on ne règle pas dix retards à la main, on les déduit d'un seul
+     * mouvement, et le contraste est juste par construction : au-dessus du
+     * bord il y a l'encre, au-dessous la carte, jamais de gris entre les deux.
+     *
+     * Sans voile — c'est le repli — tout bascule au même instant.
+     */
+    const decouverte = (piece: Element) => {
+      if (!voile) return duree * MOMENT_ENCRE;
+      const cadre = piece.getBoundingClientRect();
+      /* Le milieu de la pièce, pas son bas : le bord met une image et demie à
+         la traverser, autant le prendre en son centre. */
+      const milieu = cadre.top + cadre.height / 2 - hautEntete;
+      return (
+        duree * VOILE_DEBUT +
+        VOILE_DUREE * gsap.utils.clamp(0, 1, milieu / hauteurEntete)
+      );
+    };
+
+    if (voile) {
+      tl.fromTo(
+        voile,
+        { scaleY: 1 },
+        /* `none`, et c'est une contrainte, pas un goût : `decouverte` déduit
+           l'heure de chaque pièce de sa position, en supposant un bord à
+           vitesse constante. Sous une courbe, le bord passe ailleurs qu'au
+           moment calculé — mesuré : une image d'avance, où le nom se
+           retrouve en clair sur du blanc. Un rideau à vitesse constante, en
+           deux cent vingt millisecondes, se lit d'ailleurs très bien. */
+        { scaleY: 0, duration: VOILE_DUREE, ease: "none", clearProps: "transform" },
+        duree * VOILE_DEBUT,
+      );
+    } else if (entete && fondAvant.current) {
+      /* Au repli il n'y a pas de voile à retirer : le bandeau reprend son
+         aplat depuis l'encre relevée au clic. Soixante-deux pixels de haut et
+         cent millisecondes — le gris n'a pas le temps de se voir. */
+      tl.from(
+        entete,
+        {
+          backgroundColor: fondAvant.current,
+          duration: CROISEMENT,
+          ease: "power1.inOut",
+          clearProps: "backgroundColor",
+        },
+        duree * MOMENT_ENCRE,
+      );
     }
 
     /**
-     * L'aplat, enfin.
+     * Les encres, pièce par pièce.
      *
-     * Sans lui, tout le reste peut bien glisser : l'en-tête encre est peint
-     * plein dès la première image, et cette image-là est un remplacement —
-     * c'est elle qu'on lisait comme un à-coup. Le bandeau doit *devenir*
-     * l'en-tête, donc l'encre doit sortir de la couleur de la carte, et y
-     * retourner en se refermant.
+     * Deux règles, et la première fait le plus gros du travail : **on ne
+     * touche que ce qui change**. La pastille du canal et celle du score ont
+     * exactement la même couleur des deux côtés — les animer, c'était écrire
+     * une valeur en ligne pour rien, et réveiller au passage la transition
+     * CSS que `badgeVariants` porte dans ses classes de base.
+     *
+     * La seconde : **à bord franc, bascule franche**. Sous le voile, le fond
+     * d'une pièce ne se dégrade pas — il passe de la carte à l'encre en une
+     * image, quand le bord la traverse. Une encre qui mettrait cent
+     * millisecondes à suivre resterait grise sur un fond déjà noir : c'est
+     * exactement ce qu'on voit sur la trace image par image, quatre images de
+     * texte gris sur l'encre. Elle bascule donc avec le bord, au même
+     * instant.
+     *
+     * Au repli, sans voile, il n'y a pas de bord : là un fondu court est le
+     * seul moyen honnête, quand GSAP sait lire les deux bouts. Tailwind 4
+     * écrit les couleurs à opacité modifiée en `oklab()`, qu'il ne sait pas
+     * lire — il replie alors la cible sur du noir, et une couleur qui
+     * traverse une valeur fausse est pire que pas de dégradé du tout.
      */
-    const bandeau = el.firstElementChild as HTMLElement | null;
-    if (bandeau) {
-      const fond = expanded ? getComputedStyle(el).backgroundColor : fondAvant.current;
-      /* À la fermeture on part de l'encre relevée au clic ; sans clic sur
-         cette carte, il n'y a rien à faire remonter. */
-      if (fond) {
-        tl.from(
-          bandeau,
-          {
-            backgroundColor: fond,
-            /* Même fenêtre que les encres qu'il porte, au même instant :
-               c'est la seule façon de garder le texte lisible d'un bout à
-               l'autre. Étaler l'aplat sur tout le geste laissait le nom en
-               encre sombre sur un fond déjà à moitié noir.
+    if (etat) {
+      const touchees: HTMLElement[] = [];
 
-               Posé passé la moitié : le bandeau s'étire d'abord tel qu'on le
-               connaît, blanc, puis passe à l'encre une fois la place prise.
-               Basculer dès la première image, c'était le remplacement d'avant
-               avec cent millisecondes de politesse. */
-            duration: CROISEMENT,
-            ease: "power1.inOut",
-            clearProps: "backgroundColor",
-          },
-          duree * MOMENT_ENCRE,
-        );
+      el.querySelectorAll<HTMLElement>(ENCRES).forEach((piece) => {
+        const avantEncre = couleursAvant.current.get(cle(piece));
+        if (!avantEncre) return;
+        const style = getComputedStyle(piece);
+        const moment = decouverte(piece);
+
+        PROPRIETES.forEach((prop) => {
+          const ancienne = avantEncre[prop];
+          const actuelle = style[prop];
+          if (!ancienne || ancienne === actuelle) return;
+          touchees.push(piece);
+
+          if (!voile && interpolable(ancienne) && interpolable(actuelle)) {
+            tl.from(
+              piece,
+              { [prop]: ancienne, duration: CROISEMENT, ease: "power1.inOut", clearProps: prop },
+              moment,
+            );
+            return;
+          }
+
+          /* Tenue, puis lâchée d'un coup. Posée hors timeline : un `set` à
+             zéro n'est rendu qu'au premier battement de GSAP, une image plus
+             tard — et cette image-là passe à l'écran avec la nouvelle encre
+             sur l'ancien fond. */
+          gsap.set(piece, { [prop]: ancienne });
+          tl.set(piece, { clearProps: prop }, moment);
+        });
+      });
+
+      if (touchees.length) {
+        /**
+         * `transition-colors` est dans les classes de base de
+         * `badgeVariants`. Dès que GSAP écrit une couleur en ligne, la
+         * transition CSS s'en empare et la ramène vers la valeur de classe,
+         * image après image : on voyait la pastille du retard s'effacer
+         * complètement puis revenir. Deux moteurs sur la même propriété, il
+         * faut en couper un.
+         */
+        gsap.set(touchees, { transitionProperty: "none" });
+        tl.set(touchees, { clearProps: "transitionProperty" }, duree);
       }
     }
 
@@ -283,10 +371,9 @@ export function useExpandTransition(expanded: boolean) {
      * en même temps : il passait par tous les degrés intermédiaires, et une
      * flèche à quarante-cinq degrés n'est plus une flèche — elle a l'air
      * cassée. Il reste donc où il est et ne fait qu'une chose : se retourner,
-     * dans la même fenêtre que l'encre, en partant de l'orientation qu'avait
+     * au moment où le voile le dépasse, en partant de l'orientation qu'avait
      * l'autre chevron. La rotation est portée par l'enveloppe, le demi-tour
-     * au repos par le `<svg>` : ils ne se cumulent pas, et l'orientation
-     * reste juste sans JavaScript.
+     * au repos par le `<svg>` : sur le même nœud, ils se cumuleraient.
      */
     const chevron = el.querySelector<HTMLElement>(CHEVRON);
     if (chevron) {
@@ -298,30 +385,30 @@ export function useExpandTransition(expanded: boolean) {
           ease: "power2.inOut",
           clearProps: "rotate,transform",
         },
-        duree * MOMENT_ENCRE,
+        /* Centrée sur le passage du bord, et non calée dessus : une rotation
+           est un mouvement, elle a besoin de part et d'autre. */
+        Math.max(0, decouverte(chevron) - CROISEMENT / 2),
       );
     }
 
     /* Ce qui n'existe qu'ouvert n'a pas d'ancienne place : ça ne peut que
-       paraître. Accroché au basculement de l'aplat, pas avant : ces lignes-là
-       sont écrites en encre claire, pour le fond sombre. Les faire monter
-       pendant que le bandeau est encore blanc, c'était les faire paraître en
-       blanc sur blanc. */
+       paraître. Chacun à son tour, quand le bord du voile arrive sur lui —
+       ces lignes-là sont écrites en encre claire, pour le fond sombre, et
+       les faire monter sur du blanc, c'est les faire paraître en blanc sur
+       blanc. Le panneau, lui, est sous l'en-tête : il vient en dernier. */
     if (expanded) {
-      const nouveaux = gsap.utils.toArray<HTMLElement>(el.querySelectorAll(NOUVEAU));
-      if (nouveaux.length) {
+      gsap.utils.toArray<HTMLElement>(el.querySelectorAll(NOUVEAU)).forEach((neuf) => {
         tl.from(
-          nouveaux,
+          neuf,
           {
             opacity: 0,
-            duration: duree * 0.55,
+            duration: CROISEMENT * 1.4,
             ease: "power1.out",
-            stagger: 0.04,
             clearProps: "opacity",
           },
-          duree * MOMENT_ENCRE,
+          decouverte(neuf),
         );
-      }
+      });
     }
 
     return () => {

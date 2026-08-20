@@ -314,8 +314,26 @@ export function TaskCard({
       {/* `pt-4` et non `p-5` : c'est le retrait du bandeau replié, au pixel.
           Une première ligne qui descend de quatre pixels en s'ouvrant se voit,
           même sans qu'on sache dire quoi. */}
-      <CardHeader className="on-tone gap-3 bg-ink px-5 pb-5 pt-4 text-on-ink">
-        <div className="flex flex-wrap items-center gap-2">
+      <CardHeader className="relative on-tone gap-3 bg-ink px-5 pb-5 pt-4 text-on-ink">
+        {/* Le voile : la couleur de la carte, posée par-dessus l'encre, qui se
+            retire vers le bas à l'ouverture.
+
+            Un fondu de blanc vers l'encre passe par le gris — c'est de
+            l'arithmétique, pas un réglage : quelle que soit sa durée, il y a
+            un instant où le fond et le texte se retrouvent à la même valeur.
+            Un bord qui descend ne mélange rien : au-dessus l'encre, en
+            dessous la carte, et chaque pièce change d'encre au moment précis
+            où ce bord la dépasse.
+
+            Au repos il est plat (`scale-y-0`) : invisible, et sans coût. */}
+        <span
+          data-voile
+          aria-hidden
+          className="pointer-events-none absolute inset-0 origin-bottom scale-y-0 bg-card"
+        />
+        {/* `relative` sur les rangs : une pièce positionnée se peint au-dessus
+            du texte en flux, donc le voile passerait devant elles. */}
+        <div className="relative flex flex-wrap items-center gap-2">
           <Badge data-flip-id="canal" variant={channelTone(task.channel)} className="gap-1">
             <Icon size={13} animateOnHover />
             {meta.label}
@@ -385,7 +403,7 @@ export function TaskCard({
 
         <div
           data-reveal
-          className="flex flex-wrap items-center gap-x-4 gap-y-1 text-meta text-on-ink/70"
+          className="relative flex flex-wrap items-center gap-x-4 gap-y-1 text-meta text-on-ink/70"
         >
           {task.contactName && <span>{task.contactName}</span>}
           {task.channel === "email" && task.email && <span>{task.email}</span>}
@@ -413,7 +431,7 @@ export function TaskCard({
         </div>
 
         {task.scoreRationale && (
-          <p data-reveal className="text-meta leading-relaxed text-on-ink/70">
+          <p data-reveal className="relative text-meta leading-relaxed text-on-ink/70">
             {task.scoreRationale}
           </p>
         )}
