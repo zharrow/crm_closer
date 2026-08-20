@@ -877,7 +877,7 @@ deux côtés sans `data-flip-id` sera remplacée au milieu du geste.
 par le gris — c'est de l'arithmétique, pas un réglage : à mi-chemin le fond et
 le texte se retrouvent à la même valeur et le nom de l'entreprise disparaît.
 L'en-tête porte donc un **voile** (`data-voile`) de la couleur de la carte,
-posé par-dessus l'encre, qui se retire vers le bas en 220 ms. Au-dessus du
+posé par-dessus l'encre, qui se retire vers le bas en 100 ms. Au-dessus du
 bord l'encre, au-dessous la carte, jamais de gris entre les deux.
 
 **Ce bord est l'horloge du geste.** Chaque pièce change d'encre, chaque ligne
@@ -887,11 +887,16 @@ pas défaire : **le voile descend en `ease: "none"`**. Sous une courbe, le bord
 passe ailleurs qu'à l'heure calculée, et le texte bascule une image trop tôt,
 en clair sur du blanc.
 
-Le geste : le bandeau s'étire en blanc (240 à 340 ms selon la distance), le
-voile se retire à partir de 30 %, tout suit son bord.
+Le geste : le bandeau s'étire en blanc (130 à 180 ms selon la distance), le
+voile se retire à partir d'un cinquième, tout suit son bord. **Ces durées sont
+celles de la doctrine, et c'est délibéré** : l'accordéon s'en était éloigné au
+nom de la distance parcourue — une carte traverse six cents pixels quand une
+modale en parcourt dix — et il y avait gagné une lenteur qui ne ressemble pas
+à l'outil. On ouvre trente actions dans une journée : ça doit répondre sous le
+doigt. Six images de rideau suffisent à voir un bord passer sans l'attendre.
 
 **Le repli n'a pas de mécanique à lui : c'est le même geste, joué à l'envers,
-1,7 fois plus vite.** Tant qu'il en avait une, il ramenait un à un les défauts
+1,6 fois plus vite** — 125 ms, contre 170 à l'aller. Tant qu'il en avait une, il ramenait un à un les défauts
 qu'on venait de retirer de l'ouverture — la substitution brutale, et la
 pastille du retard qui réapparaissait sur la ligne blanche le temps du retour.
 Une seule construction jouée dans les deux sens ne peut pas diverger : on pose

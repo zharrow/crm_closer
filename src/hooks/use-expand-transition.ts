@@ -87,24 +87,31 @@ const PROPRIETES = ["color", "backgroundColor"] as const;
 type Encre = Record<(typeof PROPRIETES)[number], string>;
 
 /**
- * 180 ms est la durée d'une modale, qui ne parcourt que quelques pixels
- * d'échelle. Une carte qui passe de 60 px à huit cents sur la même durée file
- * trop vite pour qu'on suive : la durée s'étire donc avec la distance, jusqu'à
- * 340 ms et pas au-delà — un accordéon qui prend une demi-seconde fait
- * attendre.
+ * Les six chiffres du geste. Tout se règle ici, et nulle part ailleurs.
+ *
+ * La doctrine de l'app dit 180 ms pour ce qui entre, 120 ms pour ce qui sort.
+ * L'accordéon s'en était éloigné au nom de la distance parcourue — une carte
+ * traverse six cents pixels quand une modale en parcourt dix — et il y avait
+ * gagné une lenteur qui ne ressemble pas à l'outil : on ouvre une action, on
+ * en ouvre trente dans la journée, ça doit répondre sous le doigt.
+ *
+ * La durée s'étire donc toujours avec la distance, mais dans une fourchette
+ * qui ramène le geste **sur la doctrine, pas à côté** : 180 ms à l'ouverture,
+ * 112 au retour. Le voile part à un cinquième du geste et descend en 100 ms —
+ * six images, assez pour qu'on voie un bord passer, pas assez pour l'attendre.
  */
-const dureeOuverture = gsap.utils.clamp(0.24, 0.34);
+const dureeOuverture = gsap.utils.clamp(0.13, 0.18);
 /** Le voile part une fois la place prise, et descend d'un trait. */
-const VOILE_DEBUT = 0.3;
-const VOILE_DUREE = 0.22;
+const VOILE_DEBUT = 0.2;
+const VOILE_DUREE = 0.1;
 /** Ce qui ne peut pas basculer net : la rotation du chevron. */
-const CROISEMENT = 0.1;
+const CROISEMENT = 0.06;
 /**
  * Le repli rejoue le geste à l'envers, mais pas à la même allure : ce qui
  * s'en va n'a pas à se faire attendre. C'est le seul réglage propre au
  * retour ; tout le reste est la même construction.
  */
-const RETOUR = 1.7;
+const RETOUR = 1.6;
 
 /** Le chevron n'a pas de `data-flip-id` : il lui faut quand même une clé. */
 const cle = (piece: HTMLElement) => piece.dataset.flipId ?? CHEVRON;
@@ -291,6 +298,12 @@ export function useExpandTransition(expanded: boolean) {
           const actuelle = style[prop];
           if (!ancienne || ancienne === actuelle) return;
           touchees.push(piece);
+          /* Posé deux fois, et il le faut : `gsap.set` écrit tout de suite,
+             avant la peinture, sinon l'image qui suit l'échange d'arbres
+             passe à l'écran avec la nouvelle encre sur l'ancien fond — le
+             nom en clair sur du blanc. Le `set` de la timeline, lui, est ce
+             vers quoi le repli revient en marche arrière. */
+          if (ouvre) gsap.set(piece, { [prop]: ancienne });
           tl.set(piece, { [prop]: ancienne }, 0);
           tl.set(piece, { [prop]: actuelle }, moment);
         });
@@ -305,6 +318,7 @@ export function useExpandTransition(expanded: boolean) {
          * complètement puis revenir. Deux moteurs sur la même propriété, il
          * faut en couper un.
          */
+        if (ouvre) gsap.set(touchees, { transitionProperty: "none" });
         tl.set(touchees, { transitionProperty: "none" }, 0);
         if (ouvre) {
           tl.set(
